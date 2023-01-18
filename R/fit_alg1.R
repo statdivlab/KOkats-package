@@ -121,7 +121,7 @@ fit_alg1 <- function(formula_rhs = NULL,
     }
     
     # update z values 
-    z <- update_z(Y, nu, X, B)
+    z <- update_z(Y, X, B)
     
     # update t and likelihood value
     lik_vec[t] <- compute_loglik(Y, X, B, z)

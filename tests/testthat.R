@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/reference/test_package.html#special-files
 
 library(testthat)
-library(KOkats-package)
+library(KOkatsPackage)
 
-test_check("KOkats-package")
+test_check("KOkatsPackage")
