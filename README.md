@@ -6,6 +6,7 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/statdivlab/KOkats-package/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/statdivlab/KOkats-package/actions/workflows/R-CMD-check.yaml)
+[![codecov.io](https://codecov.io/gh/statdivlab/KOkats-package/coverage.svg?branch=main)](https://codecov.io/gh/statdivlab/KOkats-package?branch=main)
 <!-- badges: end -->
 
 The goal of KOkatsPackage is to …
