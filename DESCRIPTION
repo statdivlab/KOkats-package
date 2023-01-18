@@ -1,0 +1,16 @@
+Package: KOkats_package
+Title: Includes functions to implement estimation and testing for KO abundance.
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Sarah",
+           family = "Teichman",
+           role = c("aut", "cre"),
+           email = "teichs@uw.edu")
+Description: What the package does (one paragraph).
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
