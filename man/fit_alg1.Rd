@@ -14,7 +14,8 @@ fit_alg1(
   tolerance = 0.1,
   maxit = 100,
   constraint_fn,
-  maxit_glm = 100
+  maxit_glm = 100,
+  ncores = NULL
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ fit_alg1(
 \item{constraint_fn}{A constraint function to make the B matrix identifiable.}
 
 \item{maxit_glm}{The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.}
+
+\item{ncores}{The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.}
 }
 \value{
 A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
@@ -59,6 +62,6 @@ for (i in 1:40) {
  }
 }
 
-res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)})
+res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
 
 }

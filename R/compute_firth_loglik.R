@@ -16,6 +16,10 @@ compute_firth_loglik <- function(Y, X, B, z, X_tilde, W) {
   loglik <- compute_loglik(Y, X, B, z)
   # compute information matrix using fact that I = X_tilde^T W X_tilde
   info <- t(X_tilde) %*% W %*% X_tilde 
-  firth_portion <- log(det(info))/2
+  #firth_portion <- log(det(info))/2
+  eigs <- eigen(info)$values
+  non_zero_eigs <- eigs[eigs > 0]
+  log_non_zero_eigs <- log(non_zero_eigs)
+  firth_portion <- 1/2*sum(log_non_zero_eigs)
   return(loglik + firth_portion)
 }

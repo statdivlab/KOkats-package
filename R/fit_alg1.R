@@ -10,6 +10,7 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param constraint_fn A constraint function to make the B matrix identifiable.
 #' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
+#' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
@@ -29,7 +30,7 @@
 #'  }
 #' }
 #' 
-#' res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)})
+#' res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
 #' 
 #' @export
 fit_alg1 <- function(formula_rhs = NULL,
@@ -40,7 +41,8 @@ fit_alg1 <- function(formula_rhs = NULL,
                       tolerance = 1e-1,
                       maxit = 100,
                       constraint_fn,
-                      maxit_glm = 100) {
+                      maxit_glm = 100,
+                      ncores = NULL) {
   
   # check that data has been given with either X matrix or formula and covariate data
   if(!is.null(formula_rhs)){
@@ -108,8 +110,13 @@ fit_alg1 <- function(formula_rhs = NULL,
       thetas[[j]]$j <- j
     }
     
-    cores <- parallel::detectCores()
-    B_res <- parallel::mclapply(X = thetas, FUN = update_Bj_list, mc.cores = cores - 1)
+    if (is.null(ncores)) {
+      cores <- parallel::detectCores() - 1
+    } else {
+      cores <- ncores
+    }
+    
+    B_res <- parallel::mclapply(X = thetas, FUN = update_Bj_list, mc.cores = cores)
     
     for (j in 1:J) {
       B[, j] <- B_res[[j]]

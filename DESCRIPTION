@@ -1,5 +1,5 @@
 Package: KOkatsPackage
-Title: Includes functions to implement estimation and testing for KO abundance.
+Title: Includes functions to implement estimation and testing for KO abundance
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Sarah",
@@ -15,7 +15,8 @@ Imports:
     fastglm,
     Matrix,
     stats,
-    parallel
+    parallel,
+    MASS
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

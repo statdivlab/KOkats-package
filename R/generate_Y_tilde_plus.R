@@ -10,12 +10,31 @@
 #' @export
 generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W) {
   info <- t(X_tilde) %*% W %*% X_tilde
-  info_chol <- Matrix::chol(info) 
-  chol_inv <- Matrix::solve(info_chol)
+  #info_chol <- Matrix::chol(info) 
+  # grabbing directly from radEmu - come back to think more about this later!!!
+  # info_chol <- suppressWarnings(
+  #   try(Matrix::chol(info),silent = TRUE)
+  # )
+  # if(!inherits(info_chol,"Matrix")){
+  #   perturb <- 1e-8
+  #   while(!("matrix" %in% class(info_chol))){
+  #     message("Reattempting Cholesky decomposition")
+  #     info_chol <- suppressWarnings(
+  #       try(Matrix::chol(info +
+  #                          Matrix::Diagonal(
+  #                            x = rep(perturb*max(info),
+  #                                    nrow(info)),
+  #                          )),silent = TRUE)
+  #     )
+  #     perturb <- perturb*10
+  #   }
+  # }
+  # chol_inv <- Matrix::solve(info_chol)
+  info_inv <- MASS::ginv(info)
   W_half <- sqrt(W)
   # augmented portion 
   aug <- diag(W_half %*% X_tilde %*% 
-                chol_inv %*% chol_inv %*% 
+                info_inv %*% 
                 t(X_tilde) %*% W_half)
   return(Y_tilde + aug/2)
 }

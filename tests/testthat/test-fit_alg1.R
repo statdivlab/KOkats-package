@@ -13,6 +13,6 @@ test_that("last log likelihood value is highest", {
    }
   }
 
-  res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)})
+  res <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
   expect_true(res$likelihood[length(res$likelihood)] == max(res$likelihood))
 })
