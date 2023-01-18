@@ -1,4 +1,4 @@
-Package: KOkats_package
+Package: KOkatsPackage
 Title: Includes functions to implement estimation and testing for KO abundance.
 Version: 0.0.0.9000
 Authors@R: 
