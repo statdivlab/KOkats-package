@@ -3,3 +3,4 @@
 export(compute_loglik)
 export(fit_alg1)
 export(update_Bj_list)
+export(update_z)

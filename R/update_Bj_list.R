@@ -1,4 +1,10 @@
-# update B values using Poisson regression
+#' Update Bj values 
+#' Use Poisson regression to update the Bj block in the block coordinate descent algorithm.
+#' 
+#' @param theta A list containing all necessary parameters for this function. This list includes \code{j}, the current KO to be updated, \code{Y}, the outcome matrix, \code{X}, the design matrix, \code{B}, the current value of the B matrix, and \code{z}, the current value of the z vector.
+#' 
+#' @return A vector of new values of B for KO j, the coefficients from fitting a glm.
+#' 
 #' @export 
 update_Bj_list <- function(theta) {
   j <- theta$j

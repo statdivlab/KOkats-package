@@ -2,8 +2,8 @@
 % Please edit documentation in R/fit_alg1.R
 \name{fit_alg1}
 \alias{fit_alg1}
-\title{Estimates B and z parameters
-Estimates B and z parameters using Algorithm 1.}
+\title{Fit Algorithm 1
+Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.}
 \usage{
 fit_alg1(
   formula_rhs = NULL,
@@ -17,9 +17,31 @@ fit_alg1(
   maxit_glm = 100
 )
 }
+\arguments{
+\item{formula_rhs}{The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.}
+
+\item{Y}{An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.}
+
+\item{X}{Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.}
+
+\item{covariate_data}{A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.}
+
+\item{B}{Optional initial parameter estimate for B matrix}
+
+\item{tolerance}{The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.}
+
+\item{maxit}{The maximum number of iterations of the coordinate descent algorithm.}
+
+\item{constraint_fn}{A constraint function to make the B matrix identifiable.}
+
+\item{maxit_glm}{The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.}
+}
+\value{
+A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
+}
 \description{
-Estimates B and z parameters
-Estimates B and z parameters using Algorithm 1.
+Fit Algorithm 1
+Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.
 }
 \examples{
 set.seed(4323)

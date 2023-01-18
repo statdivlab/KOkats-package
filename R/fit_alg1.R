@@ -1,5 +1,17 @@
-#' Estimates B and z parameters 
-#' Estimates B and z parameters using Algorithm 1.
+#' Fit Algorithm 1
+#' Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.
+#'
+#' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
+#' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
+#' @param X Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.
+#' @param covariate_data A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.
+#' @param B Optional initial parameter estimate for B matrix 
+#' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
+#' @param maxit The maximum number of iterations of the coordinate descent algorithm.
+#' @param constraint_fn A constraint function to make the B matrix identifiable.
+#' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
+#'
+#' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
 #' set.seed(4323)
