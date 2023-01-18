@@ -15,8 +15,7 @@
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' set.seed(4323)
-#' X <- cbind(1,rep(c(0,1),each = 20))
+#' X <- cbind(1, rep(c(0, 1), each = 20))
 #' z <- rnorm(40) + 8
 #' b0 <- rnorm(10)
 #' b1 <- 1:10
@@ -25,7 +24,7 @@
 #' 
 #' for (i in 1:40) {
 #'  for (j in 1:10) {
-#'    temp_mean <- exp(X[i,,drop = FALSE] %*% b[,j,drop = FALSE] + z[i])
+#'    temp_mean <- exp(X[i, , drop = FALSE] %*% b[, j, drop = FALSE] + z[i])
 #'    Y[i,j] <- rpois(1, lambda = temp_mean)
 #'  }
 #' }

@@ -47,8 +47,7 @@ Fit Algorithm 1
 Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.
 }
 \examples{
-set.seed(4323)
-X <- cbind(1,rep(c(0,1),each = 20))
+X <- cbind(1, rep(c(0, 1), each = 20))
 z <- rnorm(40) + 8
 b0 <- rnorm(10)
 b1 <- 1:10
@@ -57,7 +56,7 @@ Y <- matrix(NA, ncol = 10, nrow = 40)
 
 for (i in 1:40) {
  for (j in 1:10) {
-   temp_mean <- exp(X[i,,drop = FALSE] \%*\% b[,j,drop = FALSE] + z[i])
+   temp_mean <- exp(X[i, , drop = FALSE] \%*\% b[, j, drop = FALSE] + z[i])
    Y[i,j] <- rpois(1, lambda = temp_mean)
  }
 }
