@@ -8,6 +8,6 @@
 #' 
 #' @export 
 generate_W <- function(X_tilde, theta) {
-  W <- diag(as.vector(exp(X_tilde %*% theta)))
+  W <- Matrix::Diagonal(x = as.vector(exp(X_tilde %*% theta)))
   return(W)
 }

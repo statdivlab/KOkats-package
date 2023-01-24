@@ -29,7 +29,7 @@
 #'  }
 #' }
 #' 
-#' #res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+#' res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
 #' 
 #' @export
 fit_alg2 <- function(formula_rhs = NULL,
