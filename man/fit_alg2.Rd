@@ -61,6 +61,6 @@ for (i in 1:40) {
  }
 }
 
-res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
+#res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
 
 }
