@@ -120,17 +120,21 @@ fit_alg1 <- function(formula_rhs = NULL,
     for (j in 1:J) {
       B[, j] <- B_res[[j]]
     }
+    print(B)
     
     # enforce identifiability constraint 
     for (k in 1:p) {
       B[k, ] <- B[k, ] - constraint_fn(B[k, ])
     }
+    print(B)
     
     # update z values 
     z <- update_z(Y, X, B)
+    print(z)
     
     # update t and likelihood value
     lik_vec[t] <- compute_loglik(Y, X, B, z)
+    print(lik_vec[t])
     B_array[, , t] <- B
     z_array[, t] <- z
     f_old <- f_new

@@ -1,5 +1,5 @@
-#' Fit Algorithm 2
-#' Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.
+#' Fit Algorithm 1 second alternative
+#' Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
 #' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
@@ -29,10 +29,10 @@
 #'  }
 #' }
 #' 
-#' #res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+#' res <- fit_alg1_alt2(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
 #' 
 #' @export
-fit_alg2 <- function(formula_rhs = NULL,
+fit_alg1_alt2 <- function(formula_rhs = NULL,
                      Y,
                      X = NULL,
                      covariate_data = NULL,
@@ -67,10 +67,6 @@ fit_alg2 <- function(formula_rhs = NULL,
   J <- ncol(Y)
   n <- nrow(X)
   
-  # get X_tilde and Y_tilde 
-  X_tilde <- generate_X_tilde(X, J)
-  Y_tilde <- generate_Y_tilde(Y)
-  
   # set B values to 0 to start if not pre-specified
   if (is.null(B)) {
     B <- matrix(0, nrow = p, ncol = J)
@@ -89,13 +85,8 @@ fit_alg2 <- function(formula_rhs = NULL,
   # is this the right B*? If so, won't it always be exp(0) = 1? 
   z0 <- log(Y_cross) - X %*% B[, j_star]
   
-  # transform parameters to get theta and W 
-  B_tilde <- generate_B_tilde(B)
-  theta <- generate_theta(B_tilde, z)
-  W <- generate_W(X_tilde, theta)
-  
-  # get Firth penalized log likelihood for initial parameter values 
-  f0 <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+  # get log likelihood for initial parameter values 
+  f0 <- compute_loglik(Y, X, B, z0)
   
   # update B and z parameters through iteration 
   z <- z0
@@ -110,12 +101,8 @@ fit_alg2 <- function(formula_rhs = NULL,
   
   while ((f_new - f_old) > tolerance & t < maxit) {
     
-    # compute Y+
-    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W)
-    Y_plus <- generate_Y_plus(Y_tilde_plus, J)
-    
     # update each B vector in parallel using Poisson regression 
-    base_theta <- list(Y = Y_plus, X = X, B = B, z = z, maxit_glm = maxit_glm)
+    base_theta <- list(Y = Y, X = X, B = B, z = z, maxit_glm = maxit_glm)
     thetas <- list()
     for (j in 1:J) {
       thetas[[j]] <- base_theta
@@ -133,15 +120,15 @@ fit_alg2 <- function(formula_rhs = NULL,
     for (j in 1:J) {
       B[, j] <- B_res[[j]]
     }
+    print(B)
     
     # update z values 
-    z <- update_z(Y_plus, X, B)
+    z <- update_z(Y, X, B)
+    print(z)
     
     # update t and likelihood value
-    B_tilde <- generate_B_tilde(B)
-    theta <- generate_theta(B_tilde, z)
-    W <- generate_W(X_tilde, theta)
-    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+    lik_vec[t] <- compute_loglik(Y, X, B, z)
+    print(lik_vec[t])
     B_array[, , t] <- B
     z_array[, t] <- z
     f_old <- f_new
@@ -155,6 +142,7 @@ fit_alg2 <- function(formula_rhs = NULL,
     final_B[k, ] <- final_B[k, ] - constraint_fn(final_B[k, ])
   }
   final_z <- update_z(Y, X, final_B)
+  print(compute_loglik(Y, X, final_B, final_z))
   
   # get rid of NA values if algorithm finished before maxit
   if (t - 1 < maxit) {

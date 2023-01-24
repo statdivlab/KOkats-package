@@ -31,6 +31,27 @@
 #' 
 #' res <- fit_alg1_alt(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
 #' 
+#' # remove after testing!!!
+#' n <- 10
+#' J <- 3
+#' X <- cbind(1, rnorm(n), rnorm(n))
+#' z <- rnorm(n) + 8
+#' b0 <- rnorm(n, 20)
+#' b1 <- rnorm(n, 2)
+#' b2 <- rnorm(n, 10)
+#' b <- rbind(b0, b1, b2)
+#' Y <- matrix(NA, ncol = J, nrow = n)
+#' 
+#' for (i in 1:n) {
+#'  for (j in 1:J) {
+#'    temp_mean <- exp(X[i, , drop = FALSE] %*% b[, j, drop = FALSE] + z[i])
+#'    Y[i,j] <- rpois(1, lambda = temp_mean)
+#'  }
+#' }
+#' Y[1, 1] <- 0 
+#' 
+#' res1 <- fit_alg1_alt(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+#' 
 #' @export
 fit_alg1_alt <- function(formula_rhs = NULL,
                      Y,
@@ -129,12 +150,15 @@ fit_alg1_alt <- function(formula_rhs = NULL,
     for (j in 2:J) {
       B[, j] <- B_res[[j - 1]]
     }
+    print(B)
     
     # update z values 
     z <- update_z(Y, X, B)
+    print(z)
     
     # update t and likelihood value
     lik_vec[t] <- compute_loglik(Y, X, B, z)
+    print(lik_vec[t])
     B_array[, , t] <- B
     z_array[, t] <- z
     f_old <- f_new
@@ -147,6 +171,8 @@ fit_alg1_alt <- function(formula_rhs = NULL,
   for (k in 1:p) {
     final_B[k, ] <- final_B[k, ] - constraint_fn(final_B[k, ])
   }
+  final_z <- update_z(Y, X, final_B)
+  print(compute_loglik(Y, X, final_B, final_z))
   
   # get rid of NA values if algorithm finished before maxit
   if (t - 1 < maxit) {
