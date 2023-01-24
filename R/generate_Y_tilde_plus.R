@@ -30,7 +30,7 @@ generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W) {
   #   }
   # }
   # chol_inv <- Matrix::solve(info_chol)
-  info_inv <- MASS::ginv(info)
+  info_inv <- MASS::ginv(as.matrix(info))
   W_half <- sqrt(W)
   # augmented portion 
   aug <- diag(W_half %*% X_tilde %*% 
