@@ -87,7 +87,7 @@ fit_alg2 <- function(formula_rhs = NULL,
   # set z_i^(0) for each sample i 
   Y_cross <- pmax(1, Y[, j_star])
   # is this the right B*? If so, won't it always be exp(0) = 1? 
-  z0 <- log(Y_cross) - X %*% B[, j_star]
+  z <- log(Y_cross) - X %*% B[, j_star]
   
   # transform parameters to get theta and W 
   B_tilde <- generate_B_tilde(B)
@@ -98,7 +98,6 @@ fit_alg2 <- function(formula_rhs = NULL,
   f0 <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
   
   # update B and z parameters through iteration 
-  z <- z0
   t <- 1 
   f_old <- -Inf
   f_new <- f0
