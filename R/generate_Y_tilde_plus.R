@@ -19,7 +19,7 @@ generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W, X_tilde_trans) {
   right <- X_tilde_trans %*% W_half 
   aug_vec <- rep(0, nJ)
   for (i in 1:nJ) {
-    aug_vec <- left[i, ] %*% info_inv %*% right[, i]
+    aug_vec[i] <- left[i, ] %*% info_inv %*% right[, i]
   }
   #aug_mat <- W_half %*% X_tilde %*% info_inv %*% X_tilde_trans %*% W_half
   #aug <- spam::diag(aug_mat)
