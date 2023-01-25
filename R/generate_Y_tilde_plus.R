@@ -17,7 +17,7 @@ generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W, X_tilde_trans) {
   nJ <- nrow(W)
   left <- W_half %*% X_tilde
   right <- X_tilde_trans %*% W_half 
-  aug_vec <- vector(0, length = nJ)
+  aug_vec <- rep(0, nJ)
   for (i in 1:nJ) {
     aug_vec <- left[i, ] %*% info_inv %*% right[, i]
   }
