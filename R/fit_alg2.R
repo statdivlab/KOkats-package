@@ -141,7 +141,7 @@ fit_alg2 <- function(formula_rhs = NULL,
     B_tilde <- generate_B_tilde(B)
     theta <- generate_theta(B_tilde, z)
     W <- generate_W(X_tilde, theta)
-    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_tilde, W, X_tilde_trans)
     B_array[, , t] <- B
     z_array[, t] <- z
     f_old <- f_new
