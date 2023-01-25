@@ -11,12 +11,11 @@
 #' @return The value of the log likelihood.
 #' 
 #' @export
-compute_firth_loglik <- function(Y, X, B, z, X_tilde, W) {
+compute_firth_loglik <- function(Y, X, B, z, X_tilde, W, X_tilde_trans) {
   # get log likelihood 
   loglik <- compute_loglik(Y, X, B, z)
   # compute information matrix using fact that I = X_tilde^T W X_tilde
-  info <- t(X_tilde) %*% W %*% X_tilde 
-  #firth_portion <- log(det(info))/2
+  info <- X_tilde_trans %*% W %*% X_tilde 
   eigs <- eigen(info)$values
   non_zero_eigs <- eigs[eigs > 0]
   log_non_zero_eigs <- log(non_zero_eigs)

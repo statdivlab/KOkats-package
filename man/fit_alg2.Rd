@@ -47,7 +47,7 @@ Fit Algorithm 2
 Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.
 }
 \examples{
-X <- cbind(1, rep(c(0, 1), each = 20))
+X <- cbind(1, rnorm(40))
 z <- rnorm(40) + 8
 b0 <- rnorm(10)
 b1 <- 1:10
@@ -61,6 +61,6 @@ for (i in 1:40) {
  }
 }
 
-#res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
 
 }

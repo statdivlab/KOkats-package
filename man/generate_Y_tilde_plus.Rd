@@ -5,7 +5,7 @@
 \title{Generate Y tilde plus
 Generate an augmented outcome vector to use with Firth penalized likelihood.}
 \usage{
-generate_Y_tilde_plus(Y_tilde, X_tilde, W)
+generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans)
 }
 \arguments{
 \item{Y_tilde}{An outcome vector of length \code{nJ}.}

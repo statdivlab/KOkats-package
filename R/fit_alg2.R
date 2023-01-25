@@ -69,6 +69,7 @@ fit_alg2 <- function(formula_rhs = NULL,
   
   # get X_tilde and Y_tilde 
   X_tilde <- generate_X_tilde(X, J)
+  X_tilde_trans <- generate_X_tilde(X, J, transpose = TRUE)
   Y_tilde <- generate_Y_tilde(Y)
   
   # set B values to 0 to start if not pre-specified
@@ -95,7 +96,7 @@ fit_alg2 <- function(formula_rhs = NULL,
   W <- generate_W(X_tilde, theta)
   
   # get Firth penalized log likelihood for initial parameter values 
-  f0 <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+  f0 <- compute_firth_loglik(Y, X, B, z, X_tilde, W, X_tilde_trans)
   
   # update B and z parameters through iteration 
   t <- 1 
@@ -110,7 +111,7 @@ fit_alg2 <- function(formula_rhs = NULL,
   while ((f_new - f_old) > tolerance & t < maxit) {
     
     # compute Y+
-    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W)
+    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans)
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
     
     # update each B vector in parallel using Poisson regression 
