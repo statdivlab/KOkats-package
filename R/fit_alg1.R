@@ -12,7 +12,7 @@
 #' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
 #'
-#' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
+#' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration, as well as the final B and z estimates.
 #'
 #' @examples
 #' X <- cbind(1, rep(c(0, 1), each = 20))
@@ -120,17 +120,14 @@ fit_alg1 <- function(formula_rhs = NULL,
     for (j in 1:J) {
       B[, j] <- B_res[[j]]
     }
-    print(B)
     
     # enforce identifiability constraint 
     for (k in 1:p) {
       B[k, ] <- B[k, ] - constraint_fn(B[k, ])
     }
-    print(B)
     
     # update z values 
     z <- update_z(Y, X, B)
-    print(z)
     
     # update t and likelihood value
     lik_vec[t] <- compute_loglik(Y, X, B, z)
@@ -142,11 +139,14 @@ fit_alg1 <- function(formula_rhs = NULL,
     t <- t + 1
   }
   
+  final_B <- B_array[, , (t - 1)]
+  final_z <- z_array[, (t - 1)]
   # get rid of NA values if algorithm finished before maxit
   if (t - 1 < maxit) {
     lik_vec <- lik_vec[1:(t - 1)]
     B_array <- B_array[, , 1:(t - 1)]
     z_array <- z_array[, 1:(t - 1)]
   }
-  return(list(likelihood = lik_vec, B = B_array, z = z_array))
+  return(list(likelihood = lik_vec, B = B_array, z = z_array,
+              final_B = final_B, final_z = final_z))
 }
