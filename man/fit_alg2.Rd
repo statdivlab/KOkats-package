@@ -47,15 +47,17 @@ Fit Algorithm 2
 Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.
 }
 \examples{
-X <- cbind(1, rnorm(40))
-z <- rnorm(40) + 8
-b0 <- rnorm(10)
-b1 <- 1:10
+n <- 75
+J <- 200
+X <- cbind(1, rnorm(n))
+z <- rnorm(n) + 8
+b0 <- rnorm(J)
+b1 <- 1:J
 b <- rbind(b0, b1)
-Y <- matrix(NA, ncol = 10, nrow = 40)
+Y <- matrix(NA, ncol = J, nrow = n)
 
-for (i in 1:40) {
- for (j in 1:10) {
+for (i in 1:n) {
+ for (j in 1:J) {
    temp_mean <- exp(X[i, , drop = FALSE] \%*\% b[, j, drop = FALSE] + z[i])
    Y[i,j] <- rpois(1, lambda = temp_mean)
  }

@@ -5,7 +5,7 @@
 \title{Generate Y tilde plus
 Generate an augmented outcome vector to use with Firth penalized likelihood.}
 \usage{
-generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans)
+generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans, cores)
 }
 \arguments{
 \item{Y_tilde}{An outcome vector of length \code{nJ}.}
@@ -13,6 +13,10 @@ generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans)
 \item{X_tilde}{An expanded version of the design matrix.}
 
 \item{W}{A diagonal matrix with expected values of Y tilde on the diagonal.}
+
+\item{X_tilde_trans}{The transpose of the \code{X_tilde} matrix.}
+
+\item{cores}{The number of cores to use in parallel.}
 }
 \value{
 Y_tilde_plus, the augmented outcome vector.

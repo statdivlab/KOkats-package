@@ -15,15 +15,17 @@
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' X <- cbind(1, rnorm(40))
-#' z <- rnorm(40) + 8
-#' b0 <- rnorm(10)
-#' b1 <- 1:10
+#' n <- 75
+#' J <- 200
+#' X <- cbind(1, rnorm(n))
+#' z <- rnorm(n) + 8
+#' b0 <- rnorm(J)
+#' b1 <- 1:J
 #' b <- rbind(b0, b1)
-#' Y <- matrix(NA, ncol = 10, nrow = 40)
+#' Y <- matrix(NA, ncol = J, nrow = n)
 #' 
-#' for (i in 1:40) {
-#'  for (j in 1:10) {
+#' for (i in 1:n) {
+#'  for (j in 1:J) {
 #'    temp_mean <- exp(X[i, , drop = FALSE] %*% b[, j, drop = FALSE] + z[i])
 #'    Y[i,j] <- rpois(1, lambda = temp_mean)
 #'  }
@@ -110,8 +112,15 @@ fit_alg2 <- function(formula_rhs = NULL,
   
   while ((f_new - f_old) > tolerance & t < maxit) {
     
+    # figure out number of cores for parallel actions 
+    if (is.null(ncores)) {
+      cores <- parallel::detectCores() - 1
+    } else {
+      cores <- ncores
+    }
+    
     # compute Y+
-    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans)
+    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W, X_tilde_trans, cores)
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
     
     # update each B vector in parallel using Poisson regression 
@@ -120,12 +129,6 @@ fit_alg2 <- function(formula_rhs = NULL,
     for (j in 1:J) {
       thetas[[j]] <- base_theta
       thetas[[j]]$j <- j
-    }
-    
-    if (is.null(ncores)) {
-      cores <- parallel::detectCores() - 1
-    } else {
-      cores <- ncores
     }
     
     B_res <- parallel::mclapply(X = thetas, FUN = update_Bj_list, mc.cores = cores)
