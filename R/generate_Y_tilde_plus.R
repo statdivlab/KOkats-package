@@ -14,7 +14,14 @@ generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W, X_tilde_trans) {
   info_inv <- Matrix::Matrix(info_inv, sparse = TRUE)
   W_half <- sqrt(W)
   # augmented portion 
-  aug_mat <- W_half %*% X_tilde %*% info_inv %*% X_tilde_trans %*% W_half
-  aug <- spam::diag(aug_mat)
-  return(Y_tilde + aug/2)
+  nJ <- nrow(W)
+  left <- W_half %*% X_tilde
+  right <- X_tilde_trans %*% W_half 
+  aug_vec <- vector(0, length = nJ)
+  for (i in 1:nJ) {
+    aug_vec <- left[i, ] %*% info_inv %*% right[, i]
+  }
+  #aug_mat <- W_half %*% X_tilde %*% info_inv %*% X_tilde_trans %*% W_half
+  #aug <- spam::diag(aug_mat)
+  return(Y_tilde + aug_vec/2)
 }
