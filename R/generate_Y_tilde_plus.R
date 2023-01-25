@@ -25,7 +25,9 @@ generate_Y_tilde_plus <- function(Y_tilde, X_tilde, W, X_tilde_trans, cores) {
   #}
   #aug_mat <- W_half %*% X_tilde %*% info_inv %*% X_tilde_trans %*% W_half
   #aug <- spam::diag(aug_mat)
-  aug_res <- parallel::mclapply(X = 1:nJ, FUN = get_augment_diag, mc.cores = cores)
+  aug_res <- parallel::mclapply(X = 1:nJ, FUN = get_augment_diag, 
+                                left = left, right = right, 
+                                info_inv = info_inv, mc.cores = cores)
   aug_vec <- as.vector(unlist(aug_res))
   return(Y_tilde + aug_vec/2)
 }
