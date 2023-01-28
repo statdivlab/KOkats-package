@@ -176,5 +176,6 @@ fit_alg1_alt <- function(formula_rhs = NULL,
     B_array <- B_array[, , 1:(t - 1)]
     z_array <- z_array[, 1:(t - 1)]
   }
-  return(list(likelihood = lik_vec, B = B_array, z = z_array, final_B = final_B))
+  return(list(likelihood = lik_vec, B = B_array, z = z_array, final_B = final_B,
+              final_z = final_z))
 }

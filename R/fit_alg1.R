@@ -81,9 +81,11 @@ fit_alg1 <- function(formula_rhs = NULL,
   }
   
   # set z_i^(0) for each sample i 
-  Y_cross <- pmax(1, Y[, j_star])
+  #Y_cross <- pmax(1, Y[, j_star])
+  Y_cross <- 1
   # is this the right B*? If so, won't it always be exp(0) = 1? 
-  z0 <- log(Y_cross) - X %*% B[, j_star]
+  #z0 <- log(Y_cross) - X %*% B[, j_star]
+  z0 <- rep(0, n)
   
   # get log likelihood for initial parameter values 
   f0 <- compute_loglik(Y, X, B, z0)
@@ -140,7 +142,7 @@ fit_alg1 <- function(formula_rhs = NULL,
   }
   
   final_B <- B_array[, , (t - 1)]
-  final_z <- z_array[, (t - 1)]
+  final_z <- update_z(Y, X, final_B)
   # get rid of NA values if algorithm finished before maxit
   if (t - 1 < maxit) {
     lik_vec <- lik_vec[1:(t - 1)]
