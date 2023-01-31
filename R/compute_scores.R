@@ -1,3 +1,14 @@
+#' Compute score vector
+#' Compute the score equations for all parameters for given values of B and z.
+#' 
+#' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
+#' @param X Design matrix with n rows (for samples) and p columns (for covariates).
+#' @param B Beta parameter matrix with p rows (for covariates) and J columns (for KOs).
+#' @param z z parameter vector of length n.
+#' 
+#' @return The value of each score equation, evaluated at the values of B and z.
+#' 
+#' @export
 compute_scores <- function(X, Y, B, z) {
   n <- nrow(X)
   p <- ncol(X)
