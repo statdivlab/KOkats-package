@@ -1,12 +1,13 @@
-#' Fit Algorithm 1 second alternative
-#' Estimate B and z parameters through block coordinate descent to maximize the log likelihood function, details given in Algorithm 1.
+#' Fit Algorithm 1 unconstrained 
+#' Estimate B and z parameters through block coordinate descent to maximize the unconstrained log likelihood function, details given in Algorithm 1.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
 #' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
 #' @param X Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.
 #' @param covariate_data A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.
-#' @param B Optional initial parameter estimate for B matrix 
+#' @param z Optional initial parameter estimate for z vector.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
+#' @param use_tolerance If \code{FALSE}, will run until \code{maxit} regardless of convergence.
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param constraint_fn A constraint function to make the B matrix identifiable.
 #' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
@@ -29,19 +30,20 @@
 #'  }
 #' }
 #' 
-#' res <- fit_alg1_alt2(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
+#' res <- fit_bcd_unconstrained(Y = Y, X = X, constraint_fn = function(x) {median(x)}, ncores = 2)
 #' 
 #' @export
-fit_alg1_alt2 <- function(formula_rhs = NULL,
-                     Y,
-                     X = NULL,
-                     covariate_data = NULL,
-                     B = NULL,
-                     tolerance = 1e-1,
-                     maxit = 100,
-                     constraint_fn,
-                     maxit_glm = 100,
-                     ncores = NULL) {
+fit_bcd_unconstrained <- function(formula_rhs = NULL,
+                                  Y,
+                                  X = NULL,
+                                  covariate_data = NULL,
+                                  z = NULL,
+                                  tolerance = 1e-1,
+                                  use_tolerance = TRUE, 
+                                  maxit = 100,
+                                  constraint_fn,
+                                  maxit_glm = 100,
+                                  ncores = NULL) {
   
   # check that data has been given with either X matrix or formula and covariate data
   if(!is.null(formula_rhs)){
@@ -68,28 +70,16 @@ fit_alg1_alt2 <- function(formula_rhs = NULL,
   n <- nrow(X)
   
   # set B values to 0 to start if not pre-specified
-  if (is.null(B)) {
-    B <- matrix(0, nrow = p, ncol = J)
-  }
+  B <- matrix(0, nrow = p, ncol = J)
   
-  # find j*, KO to use for initial constraint 
-  j_star <- which.max(colSums(Y > 0))
-  
-  # set temporary identifiability constraint as B^(j*(0)) = 0_p 
-  for(k in 1:p){
-    B[k, ] <- B[k, ] - B[k, j_star]
-  }
-  
-  # set z_i^(0) for each sample i 
-  Y_cross <- pmax(1, Y[, j_star])
-  # is this the right B*? If so, won't it always be exp(0) = 1? 
-  z0 <- log(Y_cross) - X %*% B[, j_star]
+  if (is.null(z)) {
+    z <- rep(0, n)
+  } 
   
   # get log likelihood for initial parameter values 
-  f0 <- compute_loglik(Y, X, B, z0)
+  f0 <- compute_loglik(Y, X, B, z)
   
   # update B and z parameters through iteration 
-  z <- z0
   t <- 1 
   f_old <- -Inf
   f_new <- f0
@@ -99,7 +89,12 @@ fit_alg1_alt2 <- function(formula_rhs = NULL,
   B_array <- array(NA, dim = c(nrow(B), ncol(B), maxit))
   z_array <- array(NA, dim = c(length(z), maxit))
   
-  while ((f_new - f_old) > tolerance & t < maxit) {
+  if (use_tolerance) {
+    condition <- (f_new - f_old) > tolerance & t < maxit
+  } else {
+    condition <- t < maxit
+  }
+  while (condition) {
     
     # update each B vector in parallel using Poisson regression 
     base_theta <- list(Y = Y, X = X, B = B, z = z, maxit_glm = maxit_glm)
@@ -131,6 +126,12 @@ fit_alg1_alt2 <- function(formula_rhs = NULL,
     f_old <- f_new
     f_new <- lik_vec[t]
     t <- t + 1
+    
+    if (use_tolerance) {
+      condition <- (f_new - f_old) > tolerance & t < maxit
+    } else {
+      condition <- t < maxit
+    }
   }
   
   final_B <- B_array[, , (t-1)]
