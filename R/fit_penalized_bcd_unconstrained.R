@@ -5,7 +5,7 @@
 #' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
 #' @param X Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.
 #' @param covariate_data A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.
-#' @param B Optional initial parameter estimate for B matrix 
+#' @param z Optional initial parameter estimate for z vector.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param constraint_fn A constraint function to make the B matrix identifiable.
@@ -31,19 +31,20 @@
 #'  }
 #' }
 #' 
-#' res <- fit_alg2(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+#' res <- fit_penalized_bcd_unconstrained(Y = Y, X = X, 
+#'           constraint_fn = function(x) {mean(x)}, ncores = 2)
 #' 
 #' @export
-fit_alg2 <- function(formula_rhs = NULL,
-                     Y,
-                     X = NULL,
-                     covariate_data = NULL,
-                     B = NULL,
-                     tolerance = 1e-1,
-                     maxit = 100,
-                     constraint_fn,
-                     maxit_glm = 100,
-                     ncores = NULL) {
+fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
+                                            Y,
+                                            X = NULL,
+                                            covariate_data = NULL,
+                                            z = NULL,
+                                            tolerance = 1e-1,
+                                            maxit = 100,
+                                            constraint_fn,
+                                            maxit_glm = 100,
+                                            ncores = NULL) {
   
   # check that data has been given with either X matrix or formula and covariate data
   if(!is.null(formula_rhs)){
@@ -69,28 +70,18 @@ fit_alg2 <- function(formula_rhs = NULL,
   J <- ncol(Y)
   n <- nrow(X)
   
-  # get X_tilde and Y_tilde 
+  # get X_star and Y_tilde 
+  X_star <- generate_X_star(X, J)
   X_tilde <- generate_X_tilde(X, J)
-  X_tilde_trans <- generate_X_tilde(X, J, transpose = TRUE)
   Y_tilde <- generate_Y_tilde(Y)
   
-  # set B values to 0 to start if not pre-specified
-  if (is.null(B)) {
-    B <- matrix(0, nrow = p, ncol = J)
-  }
+  # set B values to 0 
+  B <- matrix(0, nrow = p, ncol = J)
   
-  # find j*, KO to use for initial constraint 
-  j_star <- which.max(colSums(Y > 0))
-  
-  # set temporary identifiability constraint as B^(j*(0)) = 0_p 
-  for(k in 1:p){
-    B[k, ] <- B[k, ] - B[k, j_star]
-  }
-  
-  # set z_i^(0) for each sample i 
-  Y_cross <- pmax(1, Y[, j_star])
-  # is this the right B*? If so, won't it always be exp(0) = 1? 
-  z <- log(Y_cross) - X %*% B[, j_star]
+  # set z values to 0 if not prespecified
+  if (is.null(z)) {
+    z <- rep(0, n)
+  } 
   
   # transform parameters to get theta and W 
   B_tilde <- generate_B_tilde(B)
@@ -98,7 +89,7 @@ fit_alg2 <- function(formula_rhs = NULL,
   W <- generate_W(X_tilde, theta)
   
   # get Firth penalized log likelihood for initial parameter values 
-  f0 <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+  f0 <- compute_firth_loglik(Y, X, B, z, X_star, W)
   
   # update B and z parameters through iteration 
   t <- 1 
@@ -120,7 +111,7 @@ fit_alg2 <- function(formula_rhs = NULL,
     }
     
     # compute Y+
-    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_tilde, W, cores)
+    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_star, W, cores)
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
     
     # update each B vector in parallel using Poisson regression 
@@ -144,7 +135,7 @@ fit_alg2 <- function(formula_rhs = NULL,
     B_tilde <- generate_B_tilde(B)
     theta <- generate_theta(B_tilde, z)
     W <- generate_W(X_tilde, theta)
-    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_tilde, W)
+    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_star, W)
     B_array[, , t] <- B
     z_array[, t] <- z
     f_old <- f_new

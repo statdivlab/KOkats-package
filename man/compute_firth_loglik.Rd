@@ -5,7 +5,7 @@
 \title{Compute Firth penalized log likelihood
 Compute the Firth penalized log likelihood for given values of B and z.}
 \usage{
-compute_firth_loglik(Y, X, B, z, X_tilde, W, X_tilde_trans)
+compute_firth_loglik(Y, X, B, z, X_aug, W)
 }
 \arguments{
 \item{Y}{An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.}
@@ -16,7 +16,7 @@ compute_firth_loglik(Y, X, B, z, X_tilde, W, X_tilde_trans)
 
 \item{z}{z parameter vector of length n.}
 
-\item{X_tilde}{An expanded version of the design matrix.}
+\item{X_aug}{An expanded version of the design matrix.}
 
 \item{W}{A diagonal matrix with expected values of Y tilde on the diagonal.}
 }

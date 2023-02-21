@@ -32,19 +32,3 @@ generate_X_tilde <- function(X, J, transpose = FALSE) {
   }
 }
 
-generate_X_tilde_old <- function(X, J) {
-  n <- nrow(X)
-  p <- ncol(X)
-  Ei <- diag(nrow = n)
-  Ej <- diag(nrow = J) 
-  X_tilde <- matrix(0, nrow = n*J, ncol = (p*J + n))
-  for (i in 1:n) {
-    for (j in 1:J) {
-      k <- (i - 1)*J + j 
-      X_tilde[k, ] <- c(kronecker(X[i, ], Ej[, j]), Ei[i, ])
-    }
-  }
-  return(X_tilde)
-}
-
-

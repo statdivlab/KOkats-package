@@ -38,8 +38,8 @@ test_that("fast alg gives same result as slow alg", {
   Y[1, 1] <- 0
 
   #res1 <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
-  res1 <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {mean(x)})
-  res2 <- fit_alg1_alt(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, maxit = 1000)
+  res1 <- fit_alg1(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, ncores = 2)
+  res2 <- fit_alg1_alt(Y = Y, X = X, constraint_fn = function(x) {mean(x)}, maxit = 1000, ncores = 2)
   ll1 <- compute_loglik(Y, X, res1$final_B, res1$final_z)
   ll2 <- compute_loglik(Y, X, res2$final_B, res2$final_z)
   ll1 - ll2
