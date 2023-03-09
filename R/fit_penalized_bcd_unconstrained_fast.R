@@ -15,9 +15,9 @@
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' n <- 75
-#' J <- 5
-#' X <- cbind(1, rnorm(n))
+#' n <- 100
+#' J <- 100
+#' X <- cbind(1, rep(c(0, 1), each = n/2))
 #' z <- rnorm(n) + 5
 #' b0 <- rnorm(J)
 #' b1 <- rnorm(J)
@@ -32,17 +32,17 @@
 #' }
 #' 
 #' start <- proc.time()
-#' res1 <- fit_penalized_bcd_unconstrained(Y = Y, X = X, 
+#' res <- fit_penalized_bcd_unconstrained_fast(Y = Y, X = X, 
 #'           constraint_fn = function(x) {mean(x)}, ncores = 2)
 #' proc.time() - start
 #' 
 #' @export
-fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
+fit_penalized_bcd_unconstrained_fast <- function(formula_rhs = NULL,
                                             Y,
                                             X = NULL,
                                             covariate_data = NULL,
                                             z = NULL,
-                                            tolerance = 1e-5,
+                                            tolerance = 1e-1,
                                             maxit = 100,
                                             constraint_fn,
                                             maxit_glm = 100,
@@ -73,8 +73,8 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
   n <- nrow(X)
   
   # get X_star and Y_tilde 
-  X_star <- generate_X_star(X, J)
-  X_tilde <- generate_X_tilde(X, J)
+  X_prime <- generate_X_prime(X, J)
+  A_prime <- generate_A_prime(X_prime, J)
   Y_tilde <- generate_Y_tilde(Y)
   
   # set B values to 0 
@@ -86,12 +86,15 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
   } 
   
   # transform parameters to get theta and W 
-  B_tilde <- generate_B_tilde(B)
-  theta <- generate_theta(B_tilde, z)
-  W <- generate_W(X_tilde, theta)
+  B_prime <- as.vector(B)
+  theta <- generate_theta(B_prime, z)
+  W <- generate_W(A_prime, theta)
   
-  # get Firth penalized log likelihood for initial parameter values 
-  f0 <- compute_firth_loglik(Y, X, B, z, X_star, W)
+  # get information matrix 
+  W_half <- sqrt(W)
+  info_left <- Matrix::crossprod(X_prime, W_half) 
+  info_right <- W_half %*% X_prime
+  info <- info_left %*% info_right
   
   # update B and z parameters through iteration 
   t <- 1 
@@ -104,9 +107,8 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
   B_array <- array(NA, dim = c(nrow(B), ncol(B), maxit))
   z_array <- array(NA, dim = c(length(z), maxit))
   
-  while (t == 1 | (sum(((B_new - B_old)/B_old)^2) > tolerance & t < maxit)) {
-  #while (t == 1 | ((f_new - f_old) > tolerance & t < maxit)) {
-  #while (t %in% c(1, 2) | ((s_new - s_old)/s_old > tolerance & t < maxit)) {
+  while (t == 1 | 
+         (sum(((B_new - B_old)/B_old)^2) > tolerance & t < maxit)) {
     
     # figure out number of cores for parallel actions 
     if (is.null(ncores)) {
@@ -116,7 +118,18 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
     }
     
     # compute Y+
-    Y_tilde_plus <- generate_Y_tilde_plus(Y_tilde, X_star, W, cores)
+    info_inv_blocks <- parallel::mclapply(X = 1:J, FUN = invert_block,
+                                          p = p, info = info,
+                                          mc.cores = cores)
+    info_inv <- Matrix::bdiag(info_inv_blocks)
+    nJ <- nrow(W)
+    
+    aug_res <- info_right %*% info_inv %*% info_left
+    aug_res_T <- as(aug_res, "TsparseMatrix")
+    inds <- which(aug_res_T@i == aug_res_T@j)
+    aug_vec <- aug_res@x[inds]
+    
+    Y_tilde_plus <- Y_tilde + aug_vec/2
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
     
     # update each B vector in parallel using Poisson regression 
@@ -137,19 +150,20 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
     z <- update_z(Y_plus, X, B)
     
     # update t and likelihood value
-    B_tilde <- generate_B_tilde(B)
-    theta <- generate_theta(B_tilde, z)
-    W <- generate_W(X_tilde, theta)
-    lik_vec[t] <- compute_firth_loglik(Y, X, B, z, X_star, W)
+    B_prime <- as.vector(B)
+    theta <- generate_theta(B_prime, z)
+    W <- generate_W(A_prime, theta)
+    W_half <- sqrt(W)
+    info_left <- Matrix::crossprod(X_prime, W_half) 
+    info_right <- W_half %*% X_prime
+    info <- info_left %*% info_right
+    lik_vec[t] <- compute_loglik(Y, X, B, z) + 
+      0.5*Matrix::determinant(info)$modulus
     score_vec[t] <- sum(compute_scores(X, Y_plus, B, z)^2)
     B_array[, , t] <- B
     z_array[, t] <- z
     B_old <- B_new
     B_new <- B
-    #s_old <- s_new
-    #s_new <- score_vec[t]
-    #f_old <- f_new
-    #f_new <- lik_vec[t]
     t <- t + 1
   }
   
@@ -163,10 +177,11 @@ fit_penalized_bcd_unconstrained <- function(formula_rhs = NULL,
   # get rid of NA values if algorithm finished before maxit
   if (t - 1 < maxit) {
     lik_vec <- lik_vec[1:(t - 1)]
-    score_vec <- score_vec[1:(t-1)]
+    score_vec <- score_vec[1:(t - 1)]
     B_array <- B_array[, , 1:(t - 1)]
     z_array <- z_array[, 1:(t - 1)]
   }
-  return(list(likelihood = lik_vec, score = score_vec, B = B_array, 
-              z = z_array, final_B = final_B, final_z = final_z))
+  return(list(likelihood = lik_vec, score = score_vec, 
+              B = B_array, z = z_array,
+              final_B = final_B, final_z = final_z))
 }

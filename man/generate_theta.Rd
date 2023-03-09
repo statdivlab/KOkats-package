@@ -5,10 +5,10 @@
 \title{Generate theta
 Put all B and z parameters together into one vector.}
 \usage{
-generate_theta(B_tilde, z)
+generate_theta(B_vec, z)
 }
 \arguments{
-\item{B_tilde}{vector of B values of length p*J.}
+\item{B_vec}{vector of B values of length p*J.}
 
 \item{z}{vector of z values of length n.}
 }
