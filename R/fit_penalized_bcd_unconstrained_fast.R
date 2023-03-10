@@ -15,7 +15,7 @@
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' n <- 100
+#' n <- 72
 #' J <- 100
 #' X <- cbind(1, rep(c(0, 1), each = n/2))
 #' z <- rnorm(n) + 5
@@ -125,9 +125,9 @@ fit_penalized_bcd_unconstrained_fast <- function(formula_rhs = NULL,
     nJ <- nrow(W)
     
     aug_res <- info_right %*% info_inv %*% info_left
-    aug_res_T <- as(aug_res, "TsparseMatrix")
-    inds <- which(aug_res_T@i == aug_res_T@j)
-    aug_vec <- aug_res@x[inds]
+    j_inds <- findInterval(seq(aug_res@x) - 1, aug_res@p[-1])
+    inds <- which(aug_res@i == j_inds)
+    aug_vec <- aug_res@x[inds1]
     
     Y_tilde_plus <- Y_tilde + aug_vec/2
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
