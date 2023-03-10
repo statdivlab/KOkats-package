@@ -127,7 +127,7 @@ fit_penalized_bcd_unconstrained_fast <- function(formula_rhs = NULL,
     aug_res <- info_right %*% info_inv %*% info_left
     j_inds <- findInterval(seq(aug_res@x) - 1, aug_res@p[-1])
     inds <- which(aug_res@i == j_inds)
-    aug_vec <- aug_res@x[inds1]
+    aug_vec <- aug_res@x[inds]
     
     Y_tilde_plus <- Y_tilde + aug_vec/2
     Y_plus <- generate_Y_plus(Y_tilde_plus, J)
