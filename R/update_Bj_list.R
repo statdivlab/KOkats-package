@@ -10,7 +10,6 @@ update_Bj_list <- function(theta) {
   j <- theta$j
   Y <- theta$Y
   X <- theta$X
-  B <- theta$B
   z <- theta$z
   maxit_glm <- theta$maxit_glm
   
