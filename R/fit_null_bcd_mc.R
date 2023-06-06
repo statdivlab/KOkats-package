@@ -148,7 +148,7 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
         for (c in 1:r) {
           val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mat[, 1] + z))
           if (j_vec[r] == j_vec[c]) {
-            val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mat[, j] + z))
+            val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mat[, j_vec[r]] + z))
           }
           J_B[r, c] <- val
           J_B[c, r] <- val

@@ -33,7 +33,8 @@
 #'  }
 #' }
 #' 
-#' res <- fit_bcd_null_fc_constraint(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
+#' # don't run this function is deprecated 
+#' #res <- fit_bcd_null_fc_constraint(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
 #' 
 #' @export
 fit_bcd_null_fc_constraint <- function(formula_rhs = NULL,
