@@ -73,13 +73,13 @@ fit_score_scc <- function(formula_rhs = NULL,
   A_prime <- generate_A_prime(X_prime, J)
   W <- generate_W(A_prime, theta)
   W_half <- sqrt(W)
-  info_left <- Matrix::crossprod(X_prime, W_half) 
-  info_right <- W_half %*% X_prime
+  info_left <- Matrix::crossprod(A_prime, W_half) 
+  info_right <- W_half %*% A_prime
   info <- info_left %*% info_right
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
-  inner <- info[null_ind, ] %*% solve(info) %*% info[, null_ind]
+  inner <- info[null_ind, upd_ind] %*% solve(info[upd_ind, upd_ind]) %*% info[upd_ind, null_ind]
   test_stat <- scores[null_ind] %*% solve(inner) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
   
