@@ -1,12 +1,12 @@
-#' Run a score test with single category constraint
-#' Calculate test statistic and p-value for score test under single category constraint.
+#' Run a score test with mean constraint
+#' Calculate test statistic and p-value for score test under mean constraint.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
 #' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
 #' @param X Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.
 #' @param covariate_data A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.
 #' @param B Optional initial parameter estimate for B matrix.
-#' @param constraint_cat Category to constrain coefficients to equal \code{0}.
+#' @param constraint_cat Category to constrain coefficients to equal the negative sum of all other categories.
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
@@ -32,10 +32,10 @@
 #'  }
 #' }
 #' 
-#' res <- run_score_scc(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
+#' res <- run_score_mc(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
 #' 
 #' @export
-run_score_scc <- function(formula_rhs = NULL,
+run_score_mc <- function(formula_rhs = NULL,
                           Y,
                           X = NULL,
                           covariate_data = NULL,
@@ -53,11 +53,13 @@ run_score_scc <- function(formula_rhs = NULL,
   n <- nrow(X)
   p <- ncol(X)
   J <- ncol(Y)
-  upd_ind <- (1:(p*J + n))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
-                              get_theta_ind(j = null_j, k = null_k, p = p))]
+  upd_B_alt_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p))]
+  upd_B_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
+                                get_theta_ind(j = null_j, k = null_k, p = p))]
+  upd_ind <- c(upd_B_ind, (p*J + 1):(p*J + n))
   
   # get optimal values under null hypothesis 
-  null_res <- fit_null_bcd_scc(formula_rhs, Y, X, covariate_data, B, 
+  null_res <- fit_null_bcd_mc(formula_rhs, Y, X, covariate_data, B, 
                                constraint_cat, null_k, null_j, tolerance,
                                use_tolerance, maxit, maxit_glm, ncores)
   B_mle <- null_res$final_B
@@ -67,15 +69,36 @@ run_score_scc <- function(formula_rhs = NULL,
   scores <- compute_scores(X, Y, B_mle, z_mle)
   
   # get information matrix using mles under null 
-  B_prime <- as.vector(B_mle)
-  theta <- generate_theta(B_prime, z_mle)
-  X_prime <- generate_X_prime(X, J)
-  A_prime <- generate_A_prime(X_prime, J)
-  W <- generate_W(A_prime, theta)
-  W_half <- sqrt(W)
-  info_left <- Matrix::crossprod(A_prime, W_half) 
-  info_right <- W_half %*% A_prime
-  info <- info_left %*% info_right
+  info <- matrix(0, nrow = p*J + n, ncol = p*J + n)
+  # info block B by B
+  J_B <- matrix(NA, nrow = p*(J - 1), ncol = p*(J - 1))
+  j_vec <- rep(1:J, each = p)[upd_B_alt_ind]
+  k_vec <- rep(1:p, J)[upd_B_alt_ind]
+  for (r in 1:(p*(J - 1))) {
+    for (c in 1:r) {
+      val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mle[, 1] + z_mle))
+      if (j_vec[r] == j_vec[c]) {
+        val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*
+                           exp(X %*% B_mle[, j_vec[r]] + z_mle))
+      }
+      J_B[r, c] <- val
+      J_B[c, r] <- val
+    }
+  }
+  info[upd_B_alt_ind, upd_B_alt_ind] <- -J_B
+  # info blocks B by z and z by B
+  for (r in 1:(p*(J - 1) - 1)) {
+    for (c in 1:n) {
+      val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, 1] + z_mle[c]) + 
+        X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, j_vec[r]] + z_mle[c])
+      info[upd_ind[r], (p*J + c)] <- val
+      info[(p*J + c), upd_ind[r]] <- val
+    }
+  }
+  # info block z by z 
+  for (i in 1:n) {
+    info[p*J + i, p*J + i] <- sum(exp(X[i, ] %*% B_mle + z_mle[i]))
+  }
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
