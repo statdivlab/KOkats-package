@@ -59,9 +59,12 @@ run_score_mc <- function(formula_rhs = NULL,
   upd_ind <- c(upd_B_ind, (p*J + 1):(p*J + n))
   
   # get optimal values under null hypothesis 
-  null_res <- fit_null_bcd_mc(formula_rhs, Y, X, covariate_data, B, 
-                               constraint_cat, null_k, null_j, tolerance,
-                               use_tolerance, maxit, maxit_glm, ncores)
+  null_res <- fit_null_bcd_mc(formula_rhs = formula_rhs, Y = Y, X = X, 
+                              covariate_data = covariate_data, B = B, 
+                               constraint_cat = constraint_cat, null_k = null_k, 
+                               null_j = null_j, tolerance = tolerance,
+                               use_tolerance = use_tolerance, maxit = maxit,
+                              maxit_glm = maxit_glm, ncores = ncores)
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
   
