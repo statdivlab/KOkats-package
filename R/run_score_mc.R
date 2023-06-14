@@ -105,8 +105,10 @@ run_score_mc <- function(formula_rhs = NULL,
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
-  inner <- info[null_ind, upd_ind] %*% solve(info[upd_ind, upd_ind]) %*% info[upd_ind, null_ind]
-  test_stat <- scores[null_ind] %*% solve(inner) %*% scores[null_ind]
+  # inner <- info[null_ind, upd_ind] %*% solve(info[upd_ind, upd_ind]) %*% info[upd_ind, null_ind]
+  inner <- info[null_ind, upd_ind] %*% chol2inv(chol(info[upd_ind, upd_ind])) %*% info[upd_ind, null_ind]
+  # test_stat <- scores[null_ind] %*% solve(inner) %*% scores[null_ind]
+  test_stat <- scores[null_ind] %*% chol2inv(chol(inner)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
   
   return(list(null_estimates = null_res, test_stat = test_stat, p_val = p_val))
