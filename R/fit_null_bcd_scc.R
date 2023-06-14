@@ -176,13 +176,15 @@ fit_null_bcd_scc <- function(formula_rhs = NULL,
   final_z <- update_z(Y, X, final_B)
   
   # get rid of NA values if algorithm finished before maxit
+  converged <- FALSE 
   if (t - 1 < maxit) {
     lik_vec <- lik_vec[1:(t - 1)]
     score_mat <- score_mat[, 1:(t - 1)]
     B_array <- B_array[, , 1:(t - 1)]
     z_array <- z_array[, 1:(t - 1)]
+    converged <- TRUE
   }
   return(list(likelihood = lik_vec, B = B_array, z = z_array,
               final_B = final_B, final_z = final_z, first_lik = first_lik,
-              score_mat = score_mat))
+              score_mat = score_mat, converged = converged))
 }
