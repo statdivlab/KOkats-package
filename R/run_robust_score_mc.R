@@ -1,4 +1,4 @@
-#' Run a score test with mean constraint
+#' Run a robust score test with mean constraint
 #' Calculate test statistic and p-value for score test under mean constraint.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
@@ -32,22 +32,22 @@
 #'  }
 #' }
 #' 
-#' res <- run_score_mc(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
+#' res <- run_robust_score_mc(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
 #' 
 #' @export
-run_score_mc <- function(formula_rhs = NULL,
-                          Y,
-                          X = NULL,
-                          covariate_data = NULL,
-                          B = NULL,
-                          constraint_cat = 1,
-                          null_k = NULL,
-                          null_j = NULL, 
-                          tolerance = 1e-10,
-                          use_tolerance = TRUE, 
-                          maxit = 100,
-                          maxit_glm = 100,
-                          ncores = NULL) {
+run_robust_score_mc <- function(formula_rhs = NULL,
+                         Y,
+                         X = NULL,
+                         covariate_data = NULL,
+                         B = NULL,
+                         constraint_cat = 1,
+                         null_k = NULL,
+                         null_j = NULL, 
+                         tolerance = 1e-10,
+                         use_tolerance = TRUE, 
+                         maxit = 100,
+                         maxit_glm = 100,
+                         ncores = NULL) {
   
   # hyperparameters 
   n <- nrow(X)
@@ -55,15 +55,15 @@ run_score_mc <- function(formula_rhs = NULL,
   J <- ncol(Y)
   upd_B_alt_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p))]
   upd_B_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
-                                get_theta_ind(j = null_j, k = null_k, p = p))]
+                            get_theta_ind(j = null_j, k = null_k, p = p))]
   upd_ind <- c(upd_B_ind, (p*J + 1):(p*J + n))
   
   # get optimal values under null hypothesis 
   null_res <- fit_null_bcd_mc(formula_rhs = formula_rhs, Y = Y, X = X, 
                               covariate_data = covariate_data, B = B, 
-                               constraint_cat = constraint_cat, null_k = null_k, 
-                               null_j = null_j, tolerance = tolerance,
-                               use_tolerance = use_tolerance, maxit = maxit,
+                              constraint_cat = constraint_cat, null_k = null_k, 
+                              null_j = null_j, tolerance = tolerance,
+                              use_tolerance = use_tolerance, maxit = maxit,
                               maxit_glm = maxit_glm, ncores = ncores)
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
@@ -90,14 +90,11 @@ run_score_mc <- function(formula_rhs = NULL,
   }
   info[upd_B_alt_ind, upd_B_alt_ind] <- -J_B
   # info blocks B by z and z by B
-  # for (r in 1:(p*(J - 1) - 1)) {
   for (r in 1:(p*(J - 1))) {
     for (c in 1:n) {
       val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, 1] + z_mle[c]) + 
         X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, j_vec[r]] + z_mle[c])
-      #info[upd_ind[r], (p*J + c)] <- val
       info[upd_B_alt_ind[r], (p*J + c)] <- val
-      #info[(p*J + c), upd_ind[r]] <- val
       info[(p*J + c), upd_B_alt_ind[r]] <- val
     }
   }
@@ -106,12 +103,52 @@ run_score_mc <- function(formula_rhs = NULL,
     info[p*J + i, p*J + i] <- sum(exp(X[i, ] %*% B_mle + z_mle[i]))
   }
   
+  # get covariance of score using mles under null
+  js <- (1:J)[-constraint_cat]
+  j_vec <- c(rep(js, each = p), rep(0, n))
+  k_vec <- c(rep(1:p, J-1), rep(0, n))
+  D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
+  for (i in 1:n) {
+    for (j in js) {
+      score <- rep(0, p*(J - 1) + n)
+      for (ind in 1:(p*(J - 1))) {
+        if (j_vec[ind] == j) {
+          score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, 1] + z_mle[i]) +
+            Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
+            exp(X[i, ] %*% B_mle[, j] + z_mle[i]) 
+        } else {
+          score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, 1] + z_mle[i])
+        }
+      }
+      for (ind in 1:n) {
+        if (ind == i) {
+          score[ind + p*(J - 1)] <- 1/(J - 1) * 
+            (Y[i, 1] - exp(X[i, ] %*% B_mle[, 1] + z_mle[i])) +
+            Y[i, j] - exp(X[i, ] %*% B_mle[, j] + z_mle[i])
+        }
+      }
+      D <- D + score %*% t(score)
+    }
+  }
+  full_D <- matrix(0, nrow = p*J + n, ncol = p*J + n)
+  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
+  full_D[-constraint_ind, -constraint_ind] <- D
+  
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
-  # inner <- info[null_ind, upd_ind] %*% solve(info[upd_ind, upd_ind]) %*% info[upd_ind, null_ind]
-  inner <- info[null_ind, null_ind] - info[null_ind, upd_ind] %*% chol2inv(chol(info[upd_ind, upd_ind])) %*% info[upd_ind, null_ind]
-  # test_stat <- scores[null_ind] %*% solve(inner) %*% scores[null_ind]
-  test_stat <- scores[null_ind] %*% chol2inv(chol(inner)) %*% scores[null_ind]
+  # get variance of score 
+  D_11 <- full_D[null_ind, null_ind]
+  I_12 <- info[null_ind, upd_ind]
+  I_22_inv <- chol2inv(chol(info[upd_ind, upd_ind]))
+  D_12 <- full_D[null_ind, upd_ind]
+  D_22 <- full_D[upd_ind, upd_ind]
+  score_var <- D_11 - I_12 %*% I_22_inv %*% D_12 - 
+    D_12 %*% I_22_inv %*% I_12 + 
+    I_12 %*% I_22_inv %*% D_22 %*% I_22_inv %*% I_12
+  # score stat 
+  test_stat <- scores[null_ind] %*% chol2inv(chol(score_var)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
   
   return(list(null_estimates = null_res, test_stat = test_stat, p_val = p_val))
