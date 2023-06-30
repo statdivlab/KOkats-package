@@ -57,7 +57,7 @@ run_robust_score_scc <- function(formula_rhs = NULL,
                               get_theta_ind(j = null_j, k = null_k, p = p))]
   
   # get optimal values under null hypothesis 
-  null_res <- fit_null_bcd_scc(formula_rhs, Y, X, covariate_data, B, 
+  null_res <- fit_null_bcd_scc_alt(formula_rhs, Y, X, covariate_data, B, 
                                constraint_cat, null_k, null_j, tolerance,
                                use_tolerance, maxit, maxit_glm, ncores)
   B_mle <- null_res$final_B
