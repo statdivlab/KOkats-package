@@ -156,7 +156,7 @@ fit_null_bcd_scc_alt <- function(formula_rhs = NULL,
         }
       }
       B_old <- B_new
-      B_new <- B_old - solve(J_B) %*% F_B
+      B_new <- B_old - chol2inv(chol(J_B)) %*% F_B
       t_nr <- t_nr + 1
     }
     
