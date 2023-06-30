@@ -10,9 +10,10 @@
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
+#' @param tolerance_nr The tolerance used to stop the Newton-Raphon method.
 #' @param use_tolerance If \code{FALSE}, will run until \code{maxit} regardless of convergence.
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
-#' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
+#' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
@@ -44,9 +45,10 @@ run_robust_score_mc <- function(formula_rhs = NULL,
                          null_k = NULL,
                          null_j = NULL, 
                          tolerance = 1e-10,
+                         tolerance_nr = 1e-10,
                          use_tolerance = TRUE, 
                          maxit = 100,
-                         maxit_glm = 100,
+                         maxit_nr = 100,
                          ncores = NULL) {
   
   # hyperparameters 
@@ -63,8 +65,9 @@ run_robust_score_mc <- function(formula_rhs = NULL,
                               covariate_data = covariate_data, B = B, 
                               constraint_cat = constraint_cat, null_k = null_k, 
                               null_j = null_j, tolerance = tolerance,
+                              tolerance_nr = tolerance_nr,
                               use_tolerance = use_tolerance, maxit = maxit,
-                              maxit_glm = maxit_glm, ncores = ncores)
+                              maxit_nr = maxit_nr, ncores = ncores)
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
   

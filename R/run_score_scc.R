@@ -10,8 +10,10 @@
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
+#' @param tolerance_nr The tolerance used to stop the Newton-Raphon method.
 #' @param use_tolerance If \code{FALSE}, will run until \code{maxit} regardless of convergence.
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
+#' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
 #'
@@ -43,9 +45,11 @@ run_score_scc <- function(formula_rhs = NULL,
                           constraint_cat = 1,
                           null_k = NULL,
                           null_j = NULL, 
-                          tolerance = 1e-10,
+                          tolerance = 1e-10, 
+                          tolerance_nr = 1e-10,
                           use_tolerance = TRUE, 
                           maxit = 100,
+                          maxit_nr = 100,
                           maxit_glm = 100,
                           ncores = NULL) {
   
@@ -57,9 +61,12 @@ run_score_scc <- function(formula_rhs = NULL,
                               get_theta_ind(j = null_j, k = null_k, p = p))]
   
   # get optimal values under null hypothesis 
-  null_res <- fit_null_bcd_scc_alt(formula_rhs, Y, X, covariate_data, B, 
-                               constraint_cat, null_k, null_j, tolerance,
-                               use_tolerance, maxit, maxit_glm, ncores)
+  null_res <- fit_null_bcd_scc_alt(formula_rhs = formula_rhs, Y = Y, X = X, 
+                                   covariate_data = covariate_data, B = B,
+                                   constraint_cat = constraint_cat, null_k = null_k,
+                                   null_j = null_j, tolerance = tolerance,
+                                   use_tolerance = use_tolerance, maxit = maxit,
+                                   maxit_nr = maxit_nr, ncores = ncores)
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
   

@@ -14,7 +14,6 @@
 #' @param tolerance_nr The tolerance used to stop the Newton-Raphon method.
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
-#' @param maxit_glm The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
@@ -46,11 +45,10 @@ fit_null_bcd_scc_alt <- function(formula_rhs = NULL,
                              null_k = NULL,
                              null_j = NULL, 
                              tolerance = 1e-10,
-                             tolerance_nr = 1e-1,
+                             tolerance_nr = 1e-10,
                              use_tolerance = TRUE, 
                              maxit = 100,
                              maxit_nr = 100,
-                             maxit_glm = 100,
                              ncores = NULL) {
   
   # check that data has been given with either X matrix or formula and covariate data
@@ -93,7 +91,7 @@ fit_null_bcd_scc_alt <- function(formula_rhs = NULL,
   if (is.null(B)) {
     initial_constr <- function(x) {x[constraint_cat]}
     res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
-                                 maxit_glm = maxit_glm, ncores = ncores, 
+                                 maxit_glm = NULL, ncores = ncores, 
                                  constraint_fn = initial_constr)
     z <- res$final_z
     B <- res$final_B
