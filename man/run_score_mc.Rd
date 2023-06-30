@@ -15,9 +15,10 @@ run_score_mc(
   null_k = NULL,
   null_j = NULL,
   tolerance = 1e-10,
+  tolerance_nr = 1e-10,
   use_tolerance = TRUE,
   maxit = 100,
-  maxit_glm = 100,
+  maxit_nr = 100,
   ncores = NULL
 )
 }
@@ -40,11 +41,13 @@ run_score_mc(
 
 \item{tolerance}{The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.}
 
+\item{tolerance_nr}{The tolerance used to stop the Newton-Raphon method.}
+
 \item{use_tolerance}{If \code{FALSE}, will run until \code{maxit} regardless of convergence.}
 
 \item{maxit}{The maximum number of iterations of the coordinate descent algorithm.}
 
-\item{maxit_glm}{The maximum number of iterations when running the glm to update the block of Bj parameters in the coordinate descent algorithm.}
+\item{maxit_nr}{The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.}
 
 \item{ncores}{The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.}
 }
