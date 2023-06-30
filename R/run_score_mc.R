@@ -90,14 +90,11 @@ run_score_mc <- function(formula_rhs = NULL,
   }
   info[upd_B_alt_ind, upd_B_alt_ind] <- -J_B
   # info blocks B by z and z by B
-  # for (r in 1:(p*(J - 1) - 1)) {
   for (r in 1:(p*(J - 1))) {
     for (c in 1:n) {
       val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, 1] + z_mle[c]) + 
         X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, j_vec[r]] + z_mle[c])
-      #info[upd_ind[r], (p*J + c)] <- val
       info[upd_B_alt_ind[r], (p*J + c)] <- val
-      #info[(p*J + c), upd_ind[r]] <- val
       info[(p*J + c), upd_B_alt_ind[r]] <- val
     }
   }
@@ -108,9 +105,8 @@ run_score_mc <- function(formula_rhs = NULL,
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
-  # inner <- info[null_ind, upd_ind] %*% solve(info[upd_ind, upd_ind]) %*% info[upd_ind, null_ind]
-  inner <- info[null_ind, null_ind] - info[null_ind, upd_ind] %*% chol2inv(chol(info[upd_ind, upd_ind])) %*% info[upd_ind, null_ind]
-  # test_stat <- scores[null_ind] %*% solve(inner) %*% scores[null_ind]
+  inner <- info[null_ind, null_ind] - 
+    info[null_ind, upd_ind] %*% chol2inv(chol(info[upd_ind, upd_ind])) %*% info[upd_ind, null_ind]
   test_stat <- scores[null_ind] %*% chol2inv(chol(inner)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
   
