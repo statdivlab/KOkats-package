@@ -91,5 +91,6 @@ run_score_scc <- function(formula_rhs = NULL,
   test_stat <- scores[null_ind] %*% chol2inv(chol(inner)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
   
-  return(list(null_estimates = null_res, test_stat = test_stat, p_val = p_val))
+  return(list(null_estimates = null_res, test_stat = test_stat, p_val = p_val,
+              info = info))
 }
