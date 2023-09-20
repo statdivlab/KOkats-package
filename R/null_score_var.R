@@ -50,7 +50,7 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
     score <- rep(0, p*(J - 1) + n)
     for (ind in 1:(p*(J - 1))) {
       j <- j_vec[ind]
-      if (constraint == "sc") {
+      if (constraint == "scc") {
         score[ind] <- X[i, k_vec[ind]] * (Y[i, j] - exp(X[i, ] %*% B[, j] + z[i]))
       } else {
         score[ind] <- X[i, k_vec[ind]] * (-Y[i, 1] + Y[i, j] +
@@ -76,6 +76,6 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
   full_D[-constraint_ind, -constraint_ind] <- D
   
   # return empirical score variance
-  return(D)
+  return(full_D)
 }
 

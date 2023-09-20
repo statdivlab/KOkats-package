@@ -107,32 +107,8 @@ run_robust_score_mc_alt <- function(formula_rhs = NULL,
   }
   
   # get covariance of score using mles under null
-  js <- (1:J)[-constraint_cat]
-  j_vec <- c(rep(js, each = p), rep(0, n))
-  k_vec <- c(rep(1:p, J-1), rep(0, n))
-  D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
-  for (i in 1:n) {
-    score_first <- rep(0, p*(J - 1) + n)
-    for (ind in 1:(p*(J - 1))) {
-      j <- j_vec[ind]
-      score_first[ind] <- -Y[i, 1] * X[i, k_vec[ind]] + 
-        X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, 1] + z_mle[i]) +
-        Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
-        exp(X[i, ] %*% B_mle[, j] + z_mle[i]) 
-    }
-    for (ind in 1:n) {
-      if (ind == i) {
-        score_first[ind + p*(J - 1)] <- Y[i, 1] - 
-          exp(X[i, ] %*% B_mle[, 1] + z_mle[i]) + Y[i, j] - 
-          sum(exp(X[i, ] %*% B_mle[, js] + z_mle[i]))
-      }
-    }
-    D <- D + score_first %*% t(score_first)
-  }
-  
-  full_D <- matrix(0, nrow = p*J + n, ncol = p*J + n)
-  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
-  full_D[-constraint_ind, -constraint_ind] <- D
+  full_D <- null_score_var(Y = Y, X = X, B = B_mle, z = z_mle, 
+                           constraint = "mc", constraint_cat = constraint_cat)
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
