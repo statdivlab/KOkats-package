@@ -75,7 +75,49 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
   constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
   full_D[-constraint_ind, -constraint_ind] <- D
   
+  # calculate in original way
+  org_D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
+  for (i in 1:n) {
+    for (j in js) {
+      score <- rep(0, p*(J - 1) + n)
+      for (ind in 1:(p*(J - 1))) {
+        if (j_vec[ind] == j) {
+          if (constraint == "scc") {
+            score[ind] <- Y[i, j] * X[i, k_vec[ind]] - 
+              X[i, k_vec[ind]] * exp(X[i, ] %*% B[, j] + z[i])
+          } else {
+            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+              1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i]) +
+              Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
+              exp(X[i, ] %*% B[, j] + z[i]) 
+          }
+        } else {
+          if (constraint == "mc") {
+            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+              1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i])
+          }
+        }
+      }
+      for (ind in 1:n) {
+        if (ind == i) {
+          if (constraint == "scc") {
+            score[ind + p*(J - 1)] <- 1/(J - 1) * (Y[i, 1] - exp(z[i])) + 
+              Y[i, j] - exp(X[i, ] %*% B[, j] + z[i])
+          } else {
+            score[ind + p*(J - 1)] <- 1/(J - 1) * 
+              (Y[i, 1] - exp(X[i, ] %*% B[, 1] + z[i])) +
+              Y[i, j] - exp(X[i, ] %*% B[, j] + z[i])
+          }
+        }
+      }
+      org_D <- org_D + score %*% t(score)
+    }
+  }
+  org_full_D <- matrix(0, nrow = p*J + n, ncol = p*J + n)
+  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
+  org_full_D[-constraint_ind, -constraint_ind] <- org_D
+  
   # return empirical score variance
-  return(full_D)
+  return(list(D = full_D, orig_D = org_full_D))
 }
 

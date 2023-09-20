@@ -86,7 +86,7 @@ run_robust_score_scc_alt <- function(formula_rhs = NULL,
   
   # get covariance of score using mles under null
   full_D <- null_score_var(Y = Y, X = X, B = B_mle, z = z_mle, 
-                           constraint = "scc", constraint_cat = constraint_cat)
+                           constraint = "scc", constraint_cat = constraint_cat)$D
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)

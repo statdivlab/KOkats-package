@@ -108,7 +108,7 @@ run_robust_score_mc_alt <- function(formula_rhs = NULL,
   
   # get covariance of score using mles under null
   full_D <- null_score_var(Y = Y, X = X, B = B_mle, z = z_mle, 
-                           constraint = "mc", constraint_cat = constraint_cat)
+                           constraint = "mc", constraint_cat = constraint_cat)$D
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
