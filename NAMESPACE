@@ -2,6 +2,7 @@
 
 export(compute_J)
 export(compute_firth_loglik)
+export(compute_info)
 export(compute_loglik)
 export(compute_loglik_constrained)
 export(compute_scores)
@@ -43,3 +44,4 @@ export(update_Bj_list)
 export(update_lambda)
 export(update_lambda_null)
 export(update_z)
+export(var_single_score)

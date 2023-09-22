@@ -75,81 +75,17 @@ run_robust_score_mc <- function(formula_rhs = NULL,
   scores <- compute_scores(X, Y, B_mle, z_mle)
   
   # get information matrix using mles under null 
-  info <- matrix(0, nrow = p*J + n, ncol = p*J + n)
-  # info block B by B
-  J_B <- matrix(NA, nrow = p*(J - 1), ncol = p*(J - 1))
-  j_vec <- rep(1:J, each = p)[upd_B_alt_ind]
-  k_vec <- rep(1:p, J)[upd_B_alt_ind]
-  for (r in 1:(p*(J - 1))) {
-    for (c in 1:r) {
-      val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mle[, 1] + z_mle))
-      if (j_vec[r] == j_vec[c]) {
-        val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*
-                           exp(X %*% B_mle[, j_vec[r]] + z_mle))
-      }
-      J_B[r, c] <- val
-      J_B[c, r] <- val
-    }
-  }
-  info[upd_B_alt_ind, upd_B_alt_ind] <- -J_B
-  # info blocks B by z and z by B
-  for (r in 1:(p*(J - 1))) {
-    for (c in 1:n) {
-      val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, 1] + z_mle[c]) + 
-        X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, j_vec[r]] + z_mle[c])
-      info[upd_B_alt_ind[r], (p*J + c)] <- val
-      info[(p*J + c), upd_B_alt_ind[r]] <- val
-    }
-  }
-  # info block z by z 
-  for (i in 1:n) {
-    info[p*J + i, p*J + i] <- sum(exp(X[i, ] %*% B_mle + z_mle[i]))
-  }
+  info <- compute_info(X = X, B = B_mle, z = z_mle, 
+                       constraint = "mc", constraint_cat = constraint_cat)
   
   # get covariance of score using mles under null
-  js <- (1:J)[-constraint_cat]
-  j_vec <- c(rep(js, each = p), rep(0, n))
-  k_vec <- c(rep(1:p, J-1), rep(0, n))
-  D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
-  for (i in 1:n) {
-    for (j in js) {
-      score <- rep(0, p*(J - 1) + n)
-      for (ind in 1:(p*(J - 1))) {
-        if (j_vec[ind] == j) {
-          score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
-            1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, 1] + z_mle[i]) +
-            Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
-            exp(X[i, ] %*% B_mle[, j] + z_mle[i]) 
-        } else {
-          score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
-            1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, 1] + z_mle[i])
-        }
-      }
-      for (ind in 1:n) {
-        if (ind == i) {
-          score[ind + p*(J - 1)] <- 1/(J - 1) * 
-            (Y[i, 1] - exp(X[i, ] %*% B_mle[, 1] + z_mle[i])) +
-            Y[i, j] - exp(X[i, ] %*% B_mle[, j] + z_mle[i])
-        }
-      }
-      D <- D + score %*% t(score)
-    }
-  }
-  full_D <- matrix(0, nrow = p*J + n, ncol = p*J + n)
-  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
-  full_D[-constraint_ind, -constraint_ind] <- D
+  full_D <- null_score_var(Y = Y, X = X, B = B_mle, z = z_mle, 
+                           constraint = "mc", constraint_cat = constraint_cat)$orig_D
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
   # get variance of score 
-  D_11 <- full_D[null_ind, null_ind]
-  I_12 <- info[null_ind, upd_ind]
-  I_22_inv <- chol2inv(chol(info[upd_ind, upd_ind]))
-  D_12 <- full_D[null_ind, upd_ind]
-  D_22 <- full_D[upd_ind, upd_ind]
-  score_var <- D_11 - I_12 %*% I_22_inv %*% D_12 - 
-    D_12 %*% I_22_inv %*% I_12 + 
-    I_12 %*% I_22_inv %*% D_22 %*% I_22_inv %*% I_12
+  score_var <- var_single_score(null_j, null_k, upd_ind, p, full_D, info)
   # score stat 
   test_stat <- scores[null_ind] %*% chol2inv(chol(score_var)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)

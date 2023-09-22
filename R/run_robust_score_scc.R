@@ -74,54 +74,17 @@ run_robust_score_scc <- function(formula_rhs = NULL,
   scores <- compute_scores(X, Y, B_mle, z_mle)
   
   # get information matrix using mles under null 
-  B_prime <- as.vector(B_mle)
-  theta <- generate_theta(B_prime, z_mle)
-  X_prime <- generate_X_prime(X, J)
-  A_prime <- generate_A_prime(X_prime, J)
-  W <- generate_W(A_prime, theta)
-  W_half <- sqrt(W)
-  info_left <- Matrix::crossprod(A_prime, W_half) 
-  info_right <- W_half %*% A_prime
-  info <- info_left %*% info_right
+  info <- compute_info(X = X, B = B_mle, z = z_mle, 
+                       constraint = "scc", constraint_cat = constraint_cat)
   
   # get covariance of score using mles under null
-  js <- (1:J)[-constraint_cat]
-  j_vec <- c(rep(js, each = p), rep(0, n))
-  k_vec <- c(rep(1:p, J-1), rep(0, n))
-  D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
-  for (i in 1:n) {
-    for (j in js) {
-      score_first <- rep(0, p*(J - 1) + n)
-      for (ind in 1:(p*(J - 1))) {
-        if (j_vec[ind] == j) {
-          score_first[ind] <- Y[i, j] * X[i, k_vec[ind]] - 
-            X[i, k_vec[ind]] * exp(X[i, ] %*% B_mle[, j] + z_mle[i])
-        }
-      }
-      for (ind in 1:n) {
-        if (ind == i) {
-          score_first[ind + p*(J - 1)] <- 1/(J - 1) * (Y[i, 1] - exp(z_mle[i])) + 
-            Y[i, j] - exp(X[i, ] %*% B_mle[, j] + z_mle[i])
-        }
-      }
-      D <- D + score_first %*% t(score_first)
-    }
-  }
-  full_D <- matrix(0, nrow = p*J + n, ncol = p*J + n)
-  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
-  full_D[-constraint_ind, -constraint_ind] <- D
+  full_D <- null_score_var(Y = Y, X = X, B = B_mle, z = z_mle, 
+                           constraint = "scc", constraint_cat = constraint_cat)$orig_D
   
   # calculate score statistic 
   null_ind <- get_theta_ind(null_j, null_k, p)
   # get variance of score 
-  D_11 <- full_D[null_ind, null_ind]
-  I_12 <- info[null_ind, upd_ind]
-  I_22_inv <- chol2inv(chol(info[upd_ind, upd_ind]))
-  D_12 <- full_D[null_ind, upd_ind]
-  D_22 <- full_D[upd_ind, upd_ind]
-  score_var <- D_11 - I_12 %*% I_22_inv %*% D_12 - 
-    D_12 %*% I_22_inv %*% I_12 + 
-    I_12 %*% I_22_inv %*% D_22 %*% I_22_inv %*% I_12
+  score_var <- var_single_score(null_j, null_k, upd_ind, p, full_D, info)
   # score stat 
   test_stat <- scores[null_ind] %*% chol2inv(chol(score_var)) %*% scores[null_ind]
   p_val <- 1 - pchisq(test_stat, 1)
