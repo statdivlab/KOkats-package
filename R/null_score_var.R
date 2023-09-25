@@ -86,15 +86,18 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
             score[ind] <- Y[i, j] * X[i, k_vec[ind]] - 
               X[i, k_vec[ind]] * exp(X[i, ] %*% B[, j] + z[i])
           } else {
-            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            #score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] + 
               1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i]) +
               Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
               exp(X[i, ] %*% B[, j] + z[i]) 
           }
         } else {
           if (constraint == "mc") {
-            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
-              1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i])
+            #score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            #  1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i])
+            score[ind] <- 1/(J - 1) * X[i, k_vec[ind]] * 
+              exp(X[i, ] %*% B[, 1] + z[i])
           }
         }
       }
