@@ -26,11 +26,11 @@
 #'  }
 #' }
 #' 
-#' res <- null_score_var(Y = Y, X = X, B = b, z = z, 
+#' res <- null_score_var_alt(Y = Y, X = X, B = b, z = z, 
 #'                       constraint = "scc", constraint_cat = 1)
 #' 
 #' @export
-null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
+null_score_var_alt <- function(Y, X, B, z, constraint, constraint_cat) {
   
   # check for valid constraint 
   if (!(constraint %in% c("scc", "mc"))) {
@@ -54,19 +54,18 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
         score[ind] <- X[i, k_vec[ind]] * (Y[i, j] - exp(X[i, ] %*% B[, j] + z[i]))
       } else {
         score[ind] <- X[i, k_vec[ind]] * (-Y[i, 1] + Y[i, j] +
-          exp(X[i, ] %*% B[, 1] + z[i]) - exp(X[i, ] %*% B[, j] + z[i]))
+                                            exp(X[i, ] %*% B[, 1] + z[i]) - exp(X[i, ] %*% B[, j] + z[i]))
       }
     }
     for (ind in 1:n) {
       if (ind == i) {
-        score[ind + p*(J - 1)] <- sum(Y[i, ]) - sum(exp(X[i, ] %*% B + z[i]))
-        # if (constraint == "scc") {
-        #   score[ind + p*(J - 1)] <- Y[i, 1] - exp(z[i]) + 
-        #     Y[i, j] - sum(exp(X[i, ] %*% B[, js] + z[i]))
-        # } else {
-        #   score[ind + p*(J - 1)] <- Y[i, 1] - exp(X[i, ] %*% B[, 1] + z[i]) + 
-        #     Y[i, j] - sum(exp(X[i, ] %*% B[, js] + z[i]))
-        # }
+        if (constraint == "scc") {
+          score[ind + p*(J - 1)] <- Y[i, 1] - exp(z[i]) + 
+            Y[i, j] - sum(exp(X[i, ] %*% B[, js] + z[i]))
+        } else {
+          score[ind + p*(J - 1)] <- Y[i, 1] - exp(X[i, ] %*% B[, 1] + z[i]) + 
+            Y[i, j] - sum(exp(X[i, ] %*% B[, js] + z[i]))
+        }
       }
     }
     D <- D + score %*% t(score)
@@ -87,18 +86,18 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
             score[ind] <- Y[i, j] * X[i, k_vec[ind]] - 
               X[i, k_vec[ind]] * exp(X[i, ] %*% B[, j] + z[i])
           } else {
-            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
-            #score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] + 
+            #score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] + 
               1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i]) +
               Y[i, j] * X[i, k_vec[ind]] - X[i, k_vec[ind]] * 
               exp(X[i, ] %*% B[, j] + z[i]) 
           }
         } else {
           if (constraint == "mc") {
-            score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
-              1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i])
-            #score[ind] <- 1/(J - 1) * X[i, k_vec[ind]] * 
-            #  exp(X[i, ] %*% B[, 1] + z[i])
+            #score[ind] <- -Y[i, 1] * X[i, k_vec[ind]] / (J - 1) + 
+            #  1/(J - 1) * X[i, k_vec[ind]] * exp(X[i, ] %*% B[, 1] + z[i])
+            score[ind] <- 1/(J - 1) * X[i, k_vec[ind]] * 
+              exp(X[i, ] %*% B[, 1] + z[i])
           }
         }
       }
@@ -124,4 +123,3 @@ null_score_var <- function(Y, X, B, z, constraint, constraint_cat) {
   # return empirical score variance
   return(list(D = full_D, orig_D = org_full_D))
 }
-
