@@ -34,7 +34,7 @@ compute_info <- function(X, B, z, constraint, constraint_cat) {
     k_vec <- rep(1:p, J)[upd_B_alt_ind]
     for (r in 1:(p*(J - 1))) {
       for (c in 1:r) {
-        val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B[, 1] + z))
+        val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B[, constraint_cat] + z))
         if (j_vec[r] == j_vec[c]) {
           val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*
                              exp(X %*% B[, j_vec[r]] + z))
@@ -47,7 +47,7 @@ compute_info <- function(X, B, z, constraint, constraint_cat) {
     # info blocks B by z and z by B
     for (r in 1:(p*(J - 1))) {
       for (c in 1:n) {
-        val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B[, 1] + z[c]) + 
+        val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B[, constraint_cat] + z[c]) + 
           X[c, k_vec[r]]*exp(X[c, ] %*% B[, j_vec[r]] + z[c])
         info[upd_B_alt_ind[r], (p*J + c)] <- val
         info[(p*J + c), upd_B_alt_ind[r]] <- val

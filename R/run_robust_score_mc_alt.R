@@ -82,7 +82,7 @@ run_robust_score_mc_alt <- function(formula_rhs = NULL,
   k_vec <- rep(1:p, J)[upd_B_alt_ind]
   for (r in 1:(p*(J - 1))) {
     for (c in 1:r) {
-      val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mle[, 1] + z_mle))
+      val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mle[, constraint_cat] + z_mle))
       if (j_vec[r] == j_vec[c]) {
         val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*
                            exp(X %*% B_mle[, j_vec[r]] + z_mle))
@@ -95,7 +95,7 @@ run_robust_score_mc_alt <- function(formula_rhs = NULL,
   # info blocks B by z and z by B
   for (r in 1:(p*(J - 1))) {
     for (c in 1:n) {
-      val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, 1] + z_mle[c]) + 
+      val <- -X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, constraint_cat] + z_mle[c]) + 
         X[c, k_vec[r]]*exp(X[c, ] %*% B_mle[, j_vec[r]] + z_mle[c])
       info[upd_B_alt_ind[r], (p*J + c)] <- val
       info[(p*J + c), upd_B_alt_ind[r]] <- val
