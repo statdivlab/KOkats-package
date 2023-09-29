@@ -1,11 +1,13 @@
-#' Estimate under the null model with mean constraint
-#' Estimate B and z parameters through block coordinate descent to maximize the unconstrained log likelihood function under a simple null hypothesis and mean constraint.
+#' Estimate under the null model
+#' Estimate B and z parameters through block coordinate descent to maximize the unconstrained log likelihood function under a simple null hypothesis and given constraint.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
-#' @param Y An outcome matrix with n rows (for samples) and J columns (for KOs) containing coverage data.
-#' @param X Design matrix with n rows (for samples) and p columns (for covariates), should have a leading intercept column of \code{1}s, can be replaced by \code{formula_rhs} and \code{covariate_data}.
 #' @param covariate_data A data frame including all covariates given in \code{formula_rhs}, can be replaced by design matrix \code{X}.
+#' @param Y An outcome matrix with n rows (for samples) and J columns (for categories) containing abundance data.
+#' @param X Design matrix with n rows (for samples) and p columns (for covariates).
 #' @param B Optional initial parameter estimate for B matrix.
+#' @param constraint Should be "scc" for single category constraint, "mc" for mean constraint, or "msc" for mean 
+#' over a subset constraint.
 #' @param constraint_cat Category to constrain coefficients to equal the negative sum of all other categories.
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
@@ -33,23 +35,14 @@
 #'  }
 #' }
 #' 
-#' res_mean <- fit_null_bcd_mc(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2)
+#' null_mle <- fit_null_mle(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
+#'                           constraint = "scc")
 #' 
 #' @export
-fit_null_bcd_mc <- function(formula_rhs = NULL,
-                            Y,
-                            X = NULL,
-                            covariate_data = NULL,
-                            B = NULL,
-                            constraint_cat = 1,
-                            null_k = NULL,
-                            null_j = NULL, 
-                            tolerance = 1e-10,
-                            tolerance_nr = 1e-10,
-                            use_tolerance = TRUE, 
-                            maxit = 100,
-                            maxit_nr = 100,
-                            ncores = NULL) {
+fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
+                            constraint, constraint_cat = 1, null_k = NULL, null_j = NULL,  
+                            tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
+                            maxit = 1000, maxit_nr = 1000, ncores = NULL) {
   
   # check that data has been given with either X matrix or formula and covariate data
   if(!is.null(formula_rhs)){
@@ -72,6 +65,11 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
     h0 <- TRUE
   }
   
+  # check for valid constraint
+  if (!(constraint %in% c("scc", "mc", "msc"))) {
+    stop("Please provide a valid constraint, either 'scc', 'mc', or 'msc'.")
+  }
+  
   # set up initial hyperparameters and parameters 
   p <- ncol(X)
   if (p < 2) {
@@ -83,7 +81,11 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
   
   # find optimal parameters without null hypothesis constraint 
   if (is.null(B)) {
-    initial_constr <- function(x) {mean(x)}
+    if (constraint == "scc") {
+      initial_constr <- function(x) {x[constraint_cat]}
+    } else if (constraint == "mc") {
+      initial_constr <- function(x) {mean(x)}
+    }
     res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
                                  maxit_glm = NULL, ncores = ncores, 
                                  constraint_fn = initial_constr)
@@ -94,8 +96,10 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
   # set null hypothesis constraint 
   if (h0) {
     B[null_k, null_j] <- 0
-    null_mean <- sum(B[null_k, ])
-    B[null_k, -null_j] <- B[null_k, -null_j] - null_mean/(J - 1)
+    if (constraint == "mc") {
+      null_mean <- sum(B[null_k, ])
+      B[null_k, -null_j] <- B[null_k, -null_j] - null_mean/(J - 1)
+    }
   }
   
   z <- update_z(Y, X, B)
@@ -132,40 +136,38 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
       B_full <- rep(0, p*J)
       B_full[upd_ind] <- B_new
       B_mat <- matrix(B_full, nrow = p, ncol = J)
-      B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
-      B_mat[null_k, null_j] <- 0 
-      F_B <- rep(NA, p*(J - 1) - 1)
-      J_B <- matrix(NA, nrow = p*(J - 1) - 1, ncol = p*(J - 1) - 1)
-      j_vec <- rep(1:J, each = p)[upd_ind]
-      k_vec <- rep(1:p, J)[upd_ind]
-      for (r in 1:(p*(J - 1) - 1)) {
-        F_B[r] <- sum(-Y[, 1]*X[, k_vec[r]] + 
-                        X[, k_vec[r]]*exp(X %*% B_mat[, 1] + z) + 
-                        Y[, j_vec[r]]*X[, k_vec[r]] - 
-                        X[, k_vec[r]]*exp(X %*% B_mat[, j_vec[r]] + z))
-        for (c in 1:r) {
-          val <- sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mat[, 1] + z))
-          if (j_vec[r] == j_vec[c]) {
-            val <- val + sum(-X[, k_vec[r]]*X[, k_vec[c]]*exp(X %*% B_mat[, j_vec[r]] + z))
-          }
-          J_B[r, c] <- val
-          J_B[c, r] <- val
-        }
+      if (constraint == "scc") {
+        B_mat[, constraint_cat] <- 0
+      } else if (constraint == "mc") {
+        B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
       }
+      B_mat[null_k, null_j] <- 0 
+      score <- compute_scores_cstr(X = X, Y = Y, B = B_mat, z = z, 
+                                   constraint = constraint, 
+                                   constraint_cat = constraint_cat)[upd_ind]
+      score_deriv <- -compute_info_cstr(X = X, B = B_mat, z = z, 
+                                        constraint = constraint,
+                                        constraint_cat = constraint_cat)[upd_ind, upd_ind]
       B_old <- B_new
-      B_new <- B_old - solve(J_B) %*% F_B
+      B_new <- B_old - solve(score_deriv) %*% score
       t_nr <- t_nr + 1
     }
     
     B[upd_ind] <- B_new
-    B[, constraint_cat] <- -rowSums(B[, -constraint_cat])
+    if (constraint == "scc") {
+      B[, constraint_cat] <- 0
+    } else if (constraint == "mc") {
+      B[, constraint_cat] <- -rowSums(B[, -constraint_cat])
+    }
     
     # update z values 
     z <- update_z(Y, X, B)
     
     # update t and likelihood value
     lik_vec[t] <- compute_loglik(Y, X, B, z)
-    scores <- compute_scores(X, Y, B, z)
+    scores <- compute_scores_cstr(X = X, Y = Y, B = B, z = z, 
+                                  constraint = constraint, 
+                                  constraint_cat = constraint_cat)
     score_mat[, t] <- scores[c(upd_ind, (p*J + 1):(p*J + n))]
     B_array[, , t] <- B
     z_array[, t] <- z
@@ -190,6 +192,7 @@ fit_null_bcd_mc <- function(formula_rhs = NULL,
     lik_vec <- lik_vec[1:(t - 1)]
     B_array <- B_array[, , 1:(t - 1)]
     z_array <- z_array[, 1:(t - 1)]
+    score_mat <- score_mat[, 1:(t - 1)]
     converged <- TRUE
   }
   return(list(likelihood = lik_vec, B = B_array, z = z_array,
