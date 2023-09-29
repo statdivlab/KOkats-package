@@ -13,6 +13,7 @@ fit_null_mle(
   B = NULL,
   constraint,
   constraint_cat = 1,
+  subset_j = NULL,
   null_k = NULL,
   null_j = NULL,
   tolerance = 1e-10,
@@ -38,6 +39,8 @@ fit_null_mle(
 over a subset constraint.}
 
 \item{constraint_cat}{Category to constrain coefficients to equal the negative sum of all other categories.}
+
+\item{subset_j}{Indices of categories to include in constraint for the mean over a subset constraint.}
 
 \item{null_k}{Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.}
 

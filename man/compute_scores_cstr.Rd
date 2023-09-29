@@ -5,7 +5,7 @@
 \title{Compute score vector with constraint
 Compute the score equations for all parameters for given values of B and z with constraint.}
 \usage{
-compute_scores_cstr(X, Y, B, z, constraint, constraint_cat = 1)
+compute_scores_cstr(X, Y, B, z, constraint, constraint_cat, subset_j)
 }
 \arguments{
 \item{X}{Design matrix with n rows (for samples) and p columns (for covariates).}
@@ -20,6 +20,8 @@ compute_scores_cstr(X, Y, B, z, constraint, constraint_cat = 1)
 over a subset constraint.}
 
 \item{constraint_cat}{Category to constrain coefficients to equal the negative sum of all other categories.}
+
+\item{subset_j}{Indices of categories to include in constraint for the mean over a subset constraint.}
 }
 \value{
 The value of each score equation, evaluated at the values of B and z with the constraint.

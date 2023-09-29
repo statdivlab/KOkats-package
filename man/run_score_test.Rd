@@ -13,6 +13,7 @@ run_score_test(
   B = NULL,
   constraint,
   constraint_cat = 1,
+  subset_j = NULL,
   null_k,
   null_j,
   robust = TRUE,
@@ -39,6 +40,8 @@ run_score_test(
 over a subset constraint.}
 
 \item{constraint_cat}{Category to constrain coefficients to equal the negative sum of all other categories.}
+
+\item{subset_j}{Indices of categories to include in constraint for the mean over a subset constraint.}
 
 \item{null_k}{Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.}
 
@@ -69,7 +72,7 @@ Calculate test statistic and p-value for robust score test under given constrain
 X <- cbind(1, rep(c(0, 1), each = 20))
 z <- rnorm(40) + 8
 b0 <- rnorm(10)
-b1 <- 1:10
+b1 <- rnorm(10)
 b <- rbind(b0, b1)
 Y <- matrix(NA, ncol = 10, nrow = 40)
 

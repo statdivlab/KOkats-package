@@ -5,7 +5,7 @@
 \title{Variance of score
 Calculate the empirical variance of the score for the constrained likelihood.}
 \usage{
-compute_score_var_cstr(Y, X, B, z, constraint, constraint_cat)
+compute_score_var_cstr(Y, X, B, z, constraint, constraint_cat, subset_j)
 }
 \arguments{
 \item{Y}{An outcome matrix with n rows (for samples) and J columns (for categories) containing abundance data.}
@@ -20,6 +20,8 @@ compute_score_var_cstr(Y, X, B, z, constraint, constraint_cat)
 over a subset constraint.}
 
 \item{constraint_cat}{Category to constrain coefficients to equal the negative sum of all other categories.}
+
+\item{subset_j}{Indices of categories to include in constraint for the mean over a subset constraint.}
 }
 \value{
 A matrix giving the empirical variance of the score vector.
