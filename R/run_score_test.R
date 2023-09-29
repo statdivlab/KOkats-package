@@ -9,6 +9,7 @@
 #' @param constraint Should be "scc" for single category constraint, "mc" for mean constraint, or "msc" for mean 
 #' over a subset constraint.
 #' @param constraint_cat Category to constrain coefficients to equal the negative sum of all other categories.
+#' @param subset_j Indices of categories to include in constraint for the mean over a subset constraint.
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
 #' @param robust If TRUE runs a robust score test, if FALSE runs a model-based score test.
@@ -25,7 +26,7 @@
 #' X <- cbind(1, rep(c(0, 1), each = 20))
 #' z <- rnorm(40) + 8
 #' b0 <- rnorm(10)
-#' b1 <- 1:10
+#' b1 <- rnorm(10)
 #' b <- rbind(b0, b1)
 #' Y <- matrix(NA, ncol = 10, nrow = 40)
 #' 
@@ -47,6 +48,7 @@ run_score_test <- function(formula_rhs = NULL,
                            B = NULL,
                            constraint, 
                            constraint_cat = 1,
+                           subset_j = NULL,
                            null_k,
                            null_j, 
                            robust = TRUE, 
@@ -57,9 +59,19 @@ run_score_test <- function(formula_rhs = NULL,
                            maxit_nr = 1000,
                            ncores = NULL) {
   
-  # check for valid constraint 
-  if (!(constraint %in% c("scc", "mc"))) {
-    stop("Please enter 'scc' for a single category constraint or 'mc' for a mean constraint.")
+  # check for valid constraint
+  if (!(constraint %in% c("scc", "mc", "msc"))) {
+    stop("Please provide a valid constraint, either 'scc', 'mc', or 'msc'.")
+  }
+  # check for requirements for mean over a subset constraint
+  if (constraint == "msc") {
+    if (is.null(subset_j)) {
+      stop("If using the 'msc' constraint, please provide 'subset_j'.")
+    } else {
+      if (!(constraint_cat %in% subset_j)) {
+        stop("Please choose a constraint category that is part of 'subset_j'.")
+      }
+    }
   }
   
   # hyperparameters 
@@ -72,7 +84,7 @@ run_score_test <- function(formula_rhs = NULL,
   # get optimal values under null hypothesis 
   null_res <- fit_null_mle(formula_rhs = formula_rhs, Y = Y, X = X, 
                            covariate_data = covariate_data, B = B, constraint = constraint,
-                           constraint_cat = constraint_cat, null_k = null_k,
+                           constraint_cat = constraint_cat, subset_j = subset_j, null_k = null_k,
                            null_j = null_j, tolerance = tolerance, 
                            tolerance_nr = tolerance_nr, 
                            use_tolerance = use_tolerance, maxit = maxit,
@@ -81,18 +93,18 @@ run_score_test <- function(formula_rhs = NULL,
   z_mle <- null_res$final_z
   
   # get scores using mles under null 
-  scores <- compute_scores_cstr(X = X, Y = Y, B = B_mle, z = z_mle,
-                                constraint = constraint, constraint_cat = constraint_cat)
+  scores <- compute_scores_cstr(X = X, Y = Y, B = B_mle, z = z_mle, constraint = constraint, 
+                                constraint_cat = constraint_cat, subset_j = subset_j)
   
   # get information matrix using mles under null 
   info <- compute_info_cstr(X = X, B = B_mle, z = z_mle, constraint = constraint,
-                            constraint_cat = constraint_cat)
+                            constraint_cat = constraint_cat, subset_j = subset_j)
   
   # get covariance of score using mles under null
   null_ind <- get_theta_ind(null_j, null_k, p)
   if (robust) {
     D <- compute_score_var_cstr(Y = Y, X = X, B = B_mle, z = z_mle, constraint = constraint,
-                                constraint_cat = constraint_cat)
+                                constraint_cat = constraint_cat, subset_j = subset_j)
     score_var <- compute_var_single_score(null_ind = null_ind, upd_ind = upd_ind, 
                                           p = p, D = D, info = info, robust = TRUE)
   } else {

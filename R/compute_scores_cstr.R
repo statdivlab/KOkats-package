@@ -8,14 +8,12 @@
 #' @param constraint Should be "scc" for single category constraint, "mc" for mean constraint, or "msc" for mean 
 #' over a subset constraint.
 #' @param constraint_cat Category to constrain coefficients to equal the negative sum of all other categories.
+#' @param subset_j Indices of categories to include in constraint for the mean over a subset constraint.
 #' 
 #' @return The value of each score equation, evaluated at the values of B and z with the constraint.
 #' 
 #' @export
-compute_scores_cstr <- function(X, Y, B, z, constraint, constraint_cat = 1) {
-  if (!(constraint %in% c("scc", "mc", "msc"))) {
-    stop("Please provide a valid constraint, either 'scc', 'mc', or 'msc'.")
-  }
+compute_scores_cstr <- function(X, Y, B, z, constraint, constraint_cat, subset_j) {
   n <- nrow(X)
   p <- ncol(X)
   J <- ncol(Y)
@@ -31,6 +29,14 @@ compute_scores_cstr <- function(X, Y, B, z, constraint, constraint_cat = 1) {
           scores[(j - 1)*p + k] <- sum(X[, k] %*% (Y[, j] - exp(log_means[, j]) -
                                                      Y[, constraint_cat] +
                                                      exp(log_means[, constraint_cat])))
+        } else {
+          if (j %in% subset_j) {
+            scores[(j - 1)*p + k] <- sum(X[, k] %*% (Y[, j] - exp(log_means[, j]) -
+                                                       Y[, constraint_cat] +
+                                                       exp(log_means[, constraint_cat])))
+          } else {
+            scores[(j - 1)*p + k] <-  sum(X[, k] %*% (Y[, j] - exp(log_means[, j])))
+          }
         }
     }
   }

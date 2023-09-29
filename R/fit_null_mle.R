@@ -9,6 +9,7 @@
 #' @param constraint Should be "scc" for single category constraint, "mc" for mean constraint, or "msc" for mean 
 #' over a subset constraint.
 #' @param constraint_cat Category to constrain coefficients to equal the negative sum of all other categories.
+#' @param subset_j Indices of categories to include in constraint for the mean over a subset constraint.
 #' @param null_k Coefficient of the covariate in design matrix that is set to \code{0} under the null hypothesis.
 #' @param null_j Category for which covariate \code{k} is set to \code{0} under the null hypothesis.
 #' @param tolerance The tolerance used to stop the algorithm when log likelihood values are within \code{tolerance} of each other.
@@ -40,9 +41,24 @@
 #' 
 #' @export
 fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
-                            constraint, constraint_cat = 1, null_k = NULL, null_j = NULL,  
-                            tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
-                            maxit = 1000, maxit_nr = 1000, ncores = NULL) {
+                         constraint, constraint_cat = 1, subset_j = NULL, null_k = NULL, null_j = NULL,  
+                         tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
+                         maxit = 1000, maxit_nr = 1000, ncores = NULL) {
+  
+  # check for valid constraint
+  if (!(constraint %in% c("scc", "mc", "msc"))) {
+    stop("Please provide a valid constraint, either 'scc', 'mc', or 'msc'.")
+  }
+  # check for requirements for mean over a subset constraint
+  if (constraint == "msc") {
+    if (is.null(subset_j)) {
+      stop("If using the 'msc' constraint, please provide 'subset_j'.")
+    } else {
+      if (!(constraint_cat %in% subset_j)) {
+        stop("Please choose a constraint category that is part of 'subset_j'.")
+      }
+    }
+  }
   
   # check that data has been given with either X matrix or formula and covariate data
   if(!is.null(formula_rhs)){
@@ -65,11 +81,6 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
     h0 <- TRUE
   }
   
-  # check for valid constraint
-  if (!(constraint %in% c("scc", "mc", "msc"))) {
-    stop("Please provide a valid constraint, either 'scc', 'mc', or 'msc'.")
-  }
-  
   # set up initial hyperparameters and parameters 
   p <- ncol(X)
   if (p < 2) {
@@ -81,24 +92,42 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
   
   # find optimal parameters without null hypothesis constraint 
   if (is.null(B)) {
-    if (constraint == "scc") {
-      initial_constr <- function(x) {x[constraint_cat]}
-    } else if (constraint == "mc") {
-      initial_constr <- function(x) {mean(x)}
+    if (is.null(B)) {
+      if (constraint == "scc") {
+        initial_constr <- function(x) {x[constraint_cat]}
+      } else if (constraint == "mc") {
+        initial_constr <- function(x) {mean(x)}
+      } else {
+        initial_constr <- function(x) {mean(x[subset_j])}
+      }
+      res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
+                                   maxit_glm = NULL, ncores = ncores, 
+                                   constraint_fn = initial_constr)
+      z <- res$final_z
+      B <- res$final_B
+    } else {
+      if (constraint == "scc") {
+        B <- B - B[, constraint_cat]
+      } else if (constraint == "mc") {
+        B <- B - rowMeans(B)
+      } else {
+        B <- B - rowMeans(B[, subset_j])
+      }
+      z <- update_z(Y, X, B)
     }
-    res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
-                                 maxit_glm = NULL, ncores = ncores, 
-                                 constraint_fn = initial_constr)
-    z <- res$final_z
-    B <- res$final_B
   }
   
   # set null hypothesis constraint 
   if (h0) {
     B[null_k, null_j] <- 0
     if (constraint == "mc") {
-      null_mean <- sum(B[null_k, ])
-      B[null_k, -null_j] <- B[null_k, -null_j] - null_mean/(J - 1)
+      null_sum <- sum(B[null_k, ])
+      B[null_k, -null_j] <- B[null_k, -null_j] - null_sum/(J - 1)
+    } else if (constraint == "msc") {
+      if (null_j %in% subset_j) {
+        null_sum <- sum(B[null_k, subset_j])
+        B[null_k, -null_j] <- B[null_k, -null_j] - null_sum/(length(subset_j) - 1)
+      }
     }
   }
   
@@ -131,6 +160,9 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
     B_old <- as.vector(B)[upd_ind]
     B_new <- as.vector(B)[upd_ind]
     t_nr <- 1
+    if (constraint == "msc") {
+      subset_j_no_c <- subset_j[subset_j != constraint_cat]
+    }
     while (t_nr == 1 | (sum(((B_new - B_old)/B_old)^2) > tolerance_nr 
                         & t_nr < maxit_nr)) {
       B_full <- rep(0, p*J)
@@ -140,14 +172,18 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
         B_mat[, constraint_cat] <- 0
       } else if (constraint == "mc") {
         B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
+      } else {
+        B_mat[, constraint_cat] <- -rowSums(B_mat[, subset_j_no_c]) 
       }
       B_mat[null_k, null_j] <- 0 
       score <- compute_scores_cstr(X = X, Y = Y, B = B_mat, z = z, 
                                    constraint = constraint, 
-                                   constraint_cat = constraint_cat)[upd_ind]
+                                   constraint_cat = constraint_cat,
+                                   subset_j = subset_j)[upd_ind]
       score_deriv <- -compute_info_cstr(X = X, B = B_mat, z = z, 
                                         constraint = constraint,
-                                        constraint_cat = constraint_cat)[upd_ind, upd_ind]
+                                        constraint_cat = constraint_cat,
+                                        subset_j = subset_j)[upd_ind, upd_ind]
       B_old <- B_new
       B_new <- B_old - solve(score_deriv) %*% score
       t_nr <- t_nr + 1
@@ -158,6 +194,8 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
       B[, constraint_cat] <- 0
     } else if (constraint == "mc") {
       B[, constraint_cat] <- -rowSums(B[, -constraint_cat])
+    } else {
+      B[, constraint_cat] <- -rowSums(B[, subset_j_no_c]) 
     }
     
     # update z values 
@@ -167,7 +205,8 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
     lik_vec[t] <- compute_loglik(Y, X, B, z)
     scores <- compute_scores_cstr(X = X, Y = Y, B = B, z = z, 
                                   constraint = constraint, 
-                                  constraint_cat = constraint_cat)
+                                  constraint_cat = constraint_cat,
+                                  subset_j = subset_j)
     score_mat[, t] <- scores[c(upd_ind, (p*J + 1):(p*J + n))]
     B_array[, , t] <- B
     z_array[, t] <- z
