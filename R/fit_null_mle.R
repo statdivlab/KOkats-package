@@ -185,7 +185,7 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
                                         constraint_cat = constraint_cat,
                                         subset_j = subset_j)[upd_ind, upd_ind]
       B_old <- B_new
-      B_new <- B_old - solve(score_deriv) %*% score
+      B_new <- B_old - chol2inv(chol(score_deriv)) %*% score
       t_nr <- t_nr + 1
     }
     
