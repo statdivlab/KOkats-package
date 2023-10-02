@@ -18,32 +18,35 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
+#' @param solve_option
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' X <- cbind(1, rep(c(0, 1), each = 20))
-#' z <- rnorm(40) + 8
-#' b0 <- rnorm(10)
-#' b1 <- 1:10
+#' J <- 50
+#' n <- 40
+#' X <- cbind(1, rep(c(0, 1), each = n/2))
+#' z <- rnorm(n) + 8
+#' b0 <- rnorm(J)
+#' b1 <- rnorm(J)
 #' b <- rbind(b0, b1)
-#' Y <- matrix(NA, ncol = 10, nrow = 40)
+#' Y <- matrix(NA, ncol = J, nrow = n)
 #' 
-#' for (i in 1:40) {
-#'  for (j in 1:10) {
+#' for (i in 1:n) {
+#'  for (j in 1:J) {
 #'    temp_mean <- exp(X[i, , drop = FALSE] %*% b[, j, drop = FALSE] + z[i])
 #'    Y[i,j] <- rpois(1, lambda = temp_mean)
 #'  }
 #' }
 #' 
 #' null_mle <- fit_null_mle(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
-#'                           constraint = "scc")
+#'                           constraint = "scc", solve_option = "solve")
 #' 
 #' @export
 fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
                          constraint, constraint_cat = 1, subset_j = NULL, null_k = NULL, null_j = NULL,  
                          tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
-                         maxit = 1000, maxit_nr = 1000, ncores = NULL) {
+                         maxit = 1000, maxit_nr = 1000, ncores = NULL, solve_option) {
   
   # check for valid constraint
   if (!(constraint %in% c("scc", "mc", "msc"))) {
@@ -185,7 +188,18 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
                                         constraint_cat = constraint_cat,
                                         subset_j = subset_j)[upd_ind, upd_ind]
       B_old <- B_new
-      B_new <- B_old + chol2inv(chol(-score_deriv)) %*% score
+      if (solve_option == "chol") {
+        B_new <- B_old + chol2inv(chol(-score_deriv)) %*% score
+      } else if (solve_option == "solve") {
+        tmp <- solve(score_deriv, -score)
+        B_new <- tmp + B_old
+      } else if (solve_option == "limSolve") {
+        tmp <- limSolve::Solve(as.matrix(score_deriv), -score)
+        B_new <- tmp + B_old
+      } else {
+        stop("Your option is not a valid solving option.")
+      }
+
       t_nr <- t_nr + 1
     }
     
