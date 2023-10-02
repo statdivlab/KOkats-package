@@ -19,6 +19,7 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
+#' @param solve_option
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
@@ -38,7 +39,7 @@
 #' }
 #' 
 #' res <- run_score_test(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
-#'                       constraint = "scc")
+#'                       constraint = "scc", solve_option = "solve")
 #' 
 #' @export
 run_score_test <- function(formula_rhs = NULL,
@@ -57,7 +58,8 @@ run_score_test <- function(formula_rhs = NULL,
                            use_tolerance = TRUE, 
                            maxit = 1000,
                            maxit_nr = 1000,
-                           ncores = NULL) {
+                           ncores = NULL,
+                           solve_option) {
   
   # check for valid constraint
   if (!(constraint %in% c("scc", "mc", "msc"))) {
@@ -88,7 +90,8 @@ run_score_test <- function(formula_rhs = NULL,
                            null_j = null_j, tolerance = tolerance, 
                            tolerance_nr = tolerance_nr, 
                            use_tolerance = use_tolerance, maxit = maxit,
-                           maxit_nr = maxit_nr, ncores = ncores)
+                           maxit_nr = maxit_nr, ncores = ncores,
+                           solve_option = solve_option)
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
   

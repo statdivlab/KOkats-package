@@ -22,7 +22,8 @@ run_score_test(
   use_tolerance = TRUE,
   maxit = 1000,
   maxit_nr = 1000,
-  ncores = NULL
+  ncores = NULL,
+  solve_option
 )
 }
 \arguments{
@@ -60,6 +61,8 @@ over a subset constraint.}
 \item{maxit_nr}{The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.}
 
 \item{ncores}{The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.}
+
+\item{solve_option}{}
 }
 \value{
 A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
@@ -84,6 +87,6 @@ for (i in 1:40) {
 }
 
 res <- run_score_test(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
-                      constraint = "scc")
+                      constraint = "scc", solve_option = "solve")
 
 }
