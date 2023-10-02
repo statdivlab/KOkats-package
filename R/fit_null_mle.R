@@ -191,10 +191,23 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
       if (solve_option == "chol") {
         B_new <- B_old + chol2inv(chol(-score_deriv)) %*% score
       } else if (solve_option == "solve") {
-        tmp <- solve(score_deriv, -score)
+        if (constraint == "scc") {
+          tmp <- Matrix::solve(score_deriv, -score, sparse = TRUE)
+        } else {
+          tmp <- Matrix::solve(score_deriv, -score)
+        }
         B_new <- tmp + B_old
       } else if (solve_option == "limSolve") {
-        tmp <- limSolve::Solve(as.matrix(score_deriv), -score)
+        if (constraint == "scc") {
+          # to get this to work need to get this into the correct form 
+          # could be faster - especially when solve fails because there are
+          # multiple possible solutions
+          # tmp <- limSolve::Solve.block(score_deriv, -score)
+          tmp <- limSolve::Solve(as.matrix(score_deriv), -score)
+        } else {
+          tmp <- limSolve::Solve(score_deriv, -score)
+        }
+        
         B_new <- tmp + B_old
       } else {
         stop("Your option is not a valid solving option.")
