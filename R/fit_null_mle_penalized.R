@@ -1,4 +1,4 @@
-#' Estimate under the null model
+#' Estimate under the penalized null model
 #' Estimate B and z parameters through block coordinate descent to maximize the unconstrained log likelihood function under a simple null hypothesis and given constraint.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
@@ -36,11 +36,11 @@
 #'  }
 #' }
 #' 
-#' null_mle <- fit_null_mle(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
+#' null_mle <- fit_null_mle_penalized(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
 #'                           constraint = "scc")
 #' 
 #' @export
-fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
+fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
                          constraint, constraint_cat = 1, subset_j = NULL, null_k = NULL, null_j = NULL,  
                          tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
                          maxit = 1000, maxit_nr = 1000, ncores = NULL) {
@@ -100,9 +100,9 @@ fit_null_mle <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL,
       } else {
         initial_constr <- function(x) {mean(x[subset_j])}
       }
-      res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
-                                   maxit_glm = NULL, ncores = ncores, 
-                                   constraint_fn = initial_constr)
+      res <- fit_penalized_bcd_unconstrained_fast(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
+                                                  maxit_glm = NULL, ncores = ncores, 
+                                                  constraint_fn = initial_constr)
       z <- res$final_z
       B <- res$final_B
     } else {

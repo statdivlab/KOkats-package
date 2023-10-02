@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit_penalized_bcd_unconstrained.R
 \name{fit_penalized_bcd_unconstrained}
 \alias{fit_penalized_bcd_unconstrained}
-\title{Fit Algorithm 2
+\title{Fit Algorithm 2 - DEPRICATED because fit_peanlized_bcd_unconstrained_fast is better
 Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.}
 \usage{
 fit_penalized_bcd_unconstrained(
@@ -43,7 +43,7 @@ fit_penalized_bcd_unconstrained(
 A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 }
 \description{
-Fit Algorithm 2
+Fit Algorithm 2 - DEPRICATED because fit_peanlized_bcd_unconstrained_fast is better
 Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.
 }
 \examples{

@@ -1,4 +1,4 @@
-#' Fit Algorithm 2
+#' Fit Algorithm 2 - DEPRICATED because fit_peanlized_bcd_unconstrained_fast is better
 #' Estimate B and z parameters through block coordinate descent to maximize the Firth penalized log likelihood function, details given in Algorithm 2.
 #'
 #' @param formula_rhs The right hand side of a formula specifying which covariates to include in the model, must be used with the \code{covariate_data} parameter or replaced by the \code{X} parameter.
