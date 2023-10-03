@@ -18,7 +18,7 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
-#' @param solve_option
+#' @param solve_option way to solve in newton raphson 
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'

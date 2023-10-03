@@ -23,7 +23,8 @@ run_score_test(
   maxit = 1000,
   maxit_nr = 1000,
   ncores = NULL,
-  solve_option
+  solve_option,
+  opt_option = "nr"
 )
 }
 \arguments{
@@ -62,7 +63,9 @@ over a subset constraint.}
 
 \item{ncores}{The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.}
 
-\item{solve_option}{}
+\item{solve_option}{way to solve in newton raphson}
+
+\item{opt_option}{"bcd" for block coordinate descent or "nr" for newton-raphson}
 }
 \value{
 A list including values of the log likelihood, the B matrix, and the z vector at each iteration.

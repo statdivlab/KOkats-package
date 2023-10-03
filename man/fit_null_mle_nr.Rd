@@ -59,7 +59,7 @@ over a subset constraint.}
 
 \item{ncores}{The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.}
 
-\item{solve_option}{}
+\item{solve_option}{way to solve in newton raphson}
 }
 \value{
 A list including values of the log likelihood, the B matrix, and the z vector at each iteration.

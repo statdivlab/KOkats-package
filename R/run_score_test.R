@@ -19,7 +19,8 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
-#' @param solve_option
+#' @param solve_option way to solve in newton raphson 
+#' @param opt_option "bcd" for block coordinate descent or "nr" for newton-raphson
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
@@ -59,7 +60,8 @@ run_score_test <- function(formula_rhs = NULL,
                            maxit = 1000,
                            maxit_nr = 1000,
                            ncores = NULL,
-                           solve_option) {
+                           solve_option,
+                           opt_option = "nr") {
   
   # check for valid constraint
   if (!(constraint %in% c("scc", "mc", "msc"))) {
@@ -84,14 +86,25 @@ run_score_test <- function(formula_rhs = NULL,
                               get_theta_ind(j = null_j, k = null_k, p = p))]
   
   # get optimal values under null hypothesis 
-  null_res <- fit_null_mle(formula_rhs = formula_rhs, Y = Y, X = X, 
-                           covariate_data = covariate_data, B = B, constraint = constraint,
-                           constraint_cat = constraint_cat, subset_j = subset_j, null_k = null_k,
-                           null_j = null_j, tolerance = tolerance, 
-                           tolerance_nr = tolerance_nr, 
-                           use_tolerance = use_tolerance, maxit = maxit,
-                           maxit_nr = maxit_nr, ncores = ncores,
-                           solve_option = solve_option)
+  if (opt_option == "bcd") {
+    null_res <- fit_null_mle(formula_rhs = formula_rhs, Y = Y, X = X, 
+                             covariate_data = covariate_data, B = B, constraint = constraint,
+                             constraint_cat = constraint_cat, subset_j = subset_j, null_k = null_k,
+                             null_j = null_j, tolerance = tolerance, 
+                             tolerance_nr = tolerance_nr, 
+                             use_tolerance = use_tolerance, maxit = maxit,
+                             maxit_nr = maxit_nr, ncores = ncores,
+                             solve_option = solve_option)
+  } else {
+    null_res <- fit_null_mle_nr(formula_rhs = formula_rhs, Y = Y, X = X, 
+                             covariate_data = covariate_data, B = B, constraint = constraint,
+                             constraint_cat = constraint_cat, subset_j = subset_j, null_k = null_k,
+                             null_j = null_j, tolerance = tolerance, 
+                             tolerance_nr = tolerance_nr, 
+                             use_tolerance = use_tolerance, maxit = maxit,
+                             maxit_nr = maxit_nr, ncores = ncores,
+                             solve_option = solve_option)
+  }
   B_mle <- null_res$final_B
   z_mle <- null_res$final_z
   
