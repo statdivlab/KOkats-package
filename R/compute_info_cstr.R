@@ -105,7 +105,8 @@ compute_info_cstr <- function(X, B, z, constraint, constraint_cat, subset_j) {
   }
   
   # set constraint category part of info matrix to NA since these are not valid parameters
-  info[constraint_cat, ] <- NA
-  info[, constraint_cat] <- NA
+  constraint_ind <- get_theta_ind(constraint_cat, 1:p, p)
+  info[constraint_ind, ] <- NA
+  info[, constraint_ind] <- NA
   return(info)
 }
