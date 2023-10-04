@@ -47,7 +47,7 @@ compute_score_var_cstr <- function(Y, X, B, z, constraint, constraint_cat, subse
     }
     for (ind in 1:n) {
       if (ind == i) {
-        score[ind + p*(J - 1)] <- sum(Y[i, ]) - sum(exp(X[i, ] %*% B + z[i]))
+        score[ind + p*(J - 1)] <- sum(Y[i, ] - exp(X[i, ] %*% B + z[i]))
       }
     }
     D <- D + score %*% t(score)
