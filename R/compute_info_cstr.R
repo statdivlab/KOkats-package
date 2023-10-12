@@ -63,7 +63,6 @@ compute_info_cstr <- function(X, B, z, constraint, constraint_cat, subset_j) {
     for (i in 1:n) {
       info[p*J + i, p*J + i] <- sum(exp(log_means[i, ]))
     }
-  # mean over a subset constraint
   } else {
     upd_B_alt_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p))]
     z_mat <- matrix(z, ncol = 1) %*% matrix(1, ncol = J, nrow = 1)

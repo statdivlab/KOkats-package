@@ -18,32 +18,35 @@
 #' @param maxit The maximum number of iterations of the coordinate descent algorithm.
 #' @param maxit_nr The maximum number of iterations of the Newton-Raphson algorithm within the coordinate descent.
 #' @param ncores The desired number of cores to optimize block of B parameters in parallel. If not provided, an appropriate number will be chosen for your machine.
+#' @param solve_option way to solve in newton raphson 
 #'
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' X <- cbind(1, rep(c(0, 1), each = 20))
-#' z <- rnorm(40) + 8
-#' b0 <- rnorm(10)
-#' b1 <- 1:10
+#' J <- 50
+#' n <- 40
+#' X <- cbind(1, rep(c(0, 1), each = n/2))
+#' z <- rnorm(n) + 8
+#' b0 <- rnorm(J)
+#' b1 <- rnorm(J)
 #' b <- rbind(b0, b1)
-#' Y <- matrix(NA, ncol = 10, nrow = 40)
+#' Y <- matrix(NA, ncol = J, nrow = n)
 #' 
-#' for (i in 1:40) {
-#'  for (j in 1:10) {
+#' for (i in 1:n) {
+#'  for (j in 1:J) {
 #'    temp_mean <- exp(X[i, , drop = FALSE] %*% b[, j, drop = FALSE] + z[i])
 #'    Y[i,j] <- rpois(1, lambda = temp_mean)
 #'  }
 #' }
 #' 
 #' null_mle <- fit_null_mle_penalized(Y = Y, X = X, ncores = 2, null_k = 2, null_j = 2,
-#'                           constraint = "scc")
+#'                           constraint = "scc", solve_option = "solve")
 #' 
 #' @export
 fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_data = NULL, B = NULL,
-                         constraint, constraint_cat = 1, subset_j = NULL, null_k = NULL, null_j = NULL,  
-                         tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
-                         maxit = 1000, maxit_nr = 1000, ncores = NULL) {
+                                   constraint, constraint_cat = 1, subset_j = NULL, null_k = NULL, null_j = NULL,  
+                                   tolerance = 1e-10, tolerance_nr = 1e-10, use_tolerance = TRUE,  
+                                   maxit = 1000, maxit_nr = 1000, ncores = NULL, solve_option) {
   
   # check for valid constraint
   if (!(constraint %in% c("scc", "mc", "msc"))) {
@@ -81,6 +84,13 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
     h0 <- TRUE
   }
   
+  # figure out number of cores for parallel actions 
+  if (is.null(ncores)) {
+    cores <- parallel::detectCores() - 1
+  } else {
+    cores <- ncores
+  }
+  
   # set up initial hyperparameters and parameters 
   p <- ncol(X)
   if (p < 2) {
@@ -89,6 +99,11 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
   }
   J <- ncol(Y)
   n <- nrow(X)
+  
+  # get X_star and Y_tilde 
+  X_prime <- generate_X_prime(X, J)
+  A_prime <- generate_A_prime(X_prime, J)
+  Y_tilde <- generate_Y_tilde(Y)
   
   # find optimal parameters without null hypothesis constraint 
   if (is.null(B)) {
@@ -100,9 +115,9 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
       } else {
         initial_constr <- function(x) {mean(x[subset_j])}
       }
-      res <- fit_penalized_bcd_unconstrained_fast(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
-                                                  maxit_glm = NULL, ncores = ncores, 
-                                                  constraint_fn = initial_constr)
+      res <- fit_bcd_unconstrained(Y = Y, X = X, tolerance = tolerance, maxit = maxit,
+                                   maxit_glm = NULL, ncores = ncores, 
+                                   constraint_fn = initial_constr)
       z <- res$final_z
       B <- res$final_B
     } else {
@@ -132,7 +147,20 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
   }
   
   z <- update_z(Y, X, B)
-  f0 <- compute_loglik(Y, X, B, z)
+  B_prime <- as.vector(B)
+  theta <- generate_theta(B_prime, z)
+  W <- generate_W(A_prime, theta)
+  W_cstr <- generate_W_cstr(W = W, X = X, B = B, z = z, constraint = constraint,
+                            constraint_cat = constraint_cat, subset_j = subset_j)$W_BB
+  obs_j_ind <- rep(1:J, n)
+  obs_cstr_ind <- obs_j_ind != constraint_cat
+  param_j_ind <- sort(rep(1:J, p))
+  param_cstr_ind <- param_j_ind != constraint_cat
+  
+  info <- Matrix::crossprod(X_prime[obs_cstr_ind, param_cstr_ind], W_cstr) %*%
+    X_prime[obs_cstr_ind, param_cstr_ind]
+  
+  f0 <- compute_loglik(Y, X, B, z) + 0.5*Matrix::determinant(info)$modulus
   first_lik <- f0 
   
   # update B and z parameters through iteration 
@@ -146,8 +174,37 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
   z_array <- array(NA, dim = c(length(z), maxit))
   score_mat <- matrix(NA, nrow = (p*(J - 1) + n - 1), ncol = maxit)
   
-  upd_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
-                          get_theta_ind(j = null_j, k = null_k, p = p))]
+  B_upd_ind <- (1:(p*J))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
+                            get_theta_ind(j = null_j, k = null_k, p = p))]
+  z_ind <- (p*J + 1):(p*J + n)
+  upd_ind <- c(B_upd_ind, z_ind) 
+  
+  # update parameter values via Newton-Raphson update 
+  B_old <- as.vector(B)[B_upd_ind]
+  B_new <- as.vector(B)[B_upd_ind]
+  z_old <- z
+  z_new <- z 
+  t <- 1
+  if (constraint == "msc") {
+    subset_j_no_c <- subset_j[subset_j != constraint_cat]
+  }
+  
+  # set initial parameter vector 
+  B_full <- rep(0, p*J)
+  # fill in B values that were updated 
+  B_full[B_upd_ind] <- B_new
+  B_mat <- matrix(B_full, nrow = p, ncol = J)
+  # fill in B values that are predetermined by constraint
+  if (constraint == "scc") {
+    B_mat[, constraint_cat] <- 0
+  } else if (constraint == "mc") {
+    B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
+  } else {
+    B_mat[, constraint_cat] <- -rowSums(B_mat[, subset_j_no_c]) 
+  }
+  
+  # set null B to 0 (Sarah check - this should never change from 0)
+  B_mat[null_k, null_j] <- 0 
   
   if (use_tolerance) {
     condition <- t == 1 || (f_new - f_old)/f_old > tolerance & t < maxit
@@ -156,60 +213,109 @@ fit_null_mle_penalized <- function(formula_rhs = NULL, Y, X = NULL, covariate_da
   }
   while (condition) {
     
-    # update B values via Newton-Raphson update 
-    B_old <- as.vector(B)[upd_ind]
-    B_new <- as.vector(B)[upd_ind]
-    t_nr <- 1
-    if (constraint == "msc") {
-      subset_j_no_c <- subset_j[subset_j != constraint_cat]
-    }
-    while (t_nr == 1 | (sum(((B_new - B_old)/B_old)^2) > tolerance_nr 
-                        & t_nr < maxit_nr)) {
-      B_full <- rep(0, p*J)
-      B_full[upd_ind] <- B_new
-      B_mat <- matrix(B_full, nrow = p, ncol = J)
-      if (constraint == "scc") {
-        B_mat[, constraint_cat] <- 0
-      } else if (constraint == "mc") {
-        B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
-      } else {
-        B_mat[, constraint_cat] <- -rowSums(B_mat[, subset_j_no_c]) 
-      }
-      B_mat[null_k, null_j] <- 0 
-      score <- compute_scores_cstr(X = X, Y = Y, B = B_mat, z = z, 
-                                   constraint = constraint, 
-                                   constraint_cat = constraint_cat,
-                                   subset_j = subset_j)[upd_ind]
-      score_deriv <- -compute_info_cstr(X = X, B = B_mat, z = z, 
-                                        constraint = constraint,
-                                        constraint_cat = constraint_cat,
-                                        subset_j = subset_j)[upd_ind, upd_ind]
-      B_old <- B_new
-      B_new <- B_old + chol2inv(chol(-score_deriv)) %*% score
-      t_nr <- t_nr + 1
-    }
-    
-    B[upd_ind] <- B_new
+    # update augmented Y's
+    # compute Y+
+    info_inv_blocks <- parallel::mclapply(X = 1:(J - 1), FUN = invert_block,
+                                          p = p, info = info,
+                                          mc.cores = cores)
+    info_inv <- Matrix::bdiag(info_inv_blocks)
     if (constraint == "scc") {
-      B[, constraint_cat] <- 0
-    } else if (constraint == "mc") {
-      B[, constraint_cat] <- -rowSums(B[, -constraint_cat])
+      W_half <- sqrt(W_cstr)
     } else {
-      B[, constraint_cat] <- -rowSums(B[, subset_j_no_c]) 
+      #stop("need to add in other constraints!")
+      W_half <- MTS::msqrt(W_cstr)$mtxsqrt
     }
     
-    # update z values 
-    z <- update_z(Y, X, B)
+    #aug_res <- info_right %*% info_inv %*% info_left
+    aug_res <- W_half %*% X_prime[obs_cstr_ind, param_cstr_ind] %*% 
+      info_inv %*% Matrix::crossprod(X_prime[obs_cstr_ind, param_cstr_ind], W_half) 
+    
+    if (constraint == "scc") {
+      j_inds <- findInterval(seq(aug_res@x) - 1, aug_res@p[-1])
+      inds <- which(aug_res@i == j_inds)
+      aug_vec <- aug_res@x[inds]
+    } else {
+      aug_vec <- diag(as.matrix(aug_res))
+    }
+    
+    full_aug_vec <- rep(0, length(Y_tilde))
+    full_aug_vec[obs_cstr_ind] <- aug_vec
+    
+    Y_tilde_plus <- Y_tilde + full_aug_vec/2
+    Y_plus <- generate_Y_plus(Y_tilde_plus, J)
+    
+    # perform NR update 
+    score <- compute_scores_cstr(X = X, Y = Y, B = B_mat, z = z_new, 
+                                 constraint = constraint, 
+                                 constraint_cat = constraint_cat,
+                                 subset_j = subset_j)[upd_ind]
+    score_deriv <- -compute_info_cstr(X = X, B = B_mat, z = z_new, 
+                                      constraint = constraint,
+                                      constraint_cat = constraint_cat,
+                                      subset_j = subset_j)[upd_ind, upd_ind]
+    B_old <- B_new
+    z_old <- z_new 
+    theta_old <- c(B_old, z_old)
+    if (solve_option == "chol") {
+      theta_new <- theta_old + chol2inv(chol(-score_deriv)) %*% score
+    } else if (solve_option == "solve") {
+      if (constraint == "scc") {
+        tmp <- Matrix::solve(score_deriv, -score, sparse = TRUE)
+      } else {
+        tmp <- Matrix::solve(score_deriv, -score)
+      }
+      theta_new <- tmp + theta_old
+    } else if (solve_option == "limSolve") {
+      if (constraint == "scc") {
+        # to get this to work need to get this into the correct form 
+        # could be faster - especially when solve fails because there are
+        # multiple possible solutions
+        # tmp <- limSolve::Solve.block(score_deriv, -score)
+        tmp <- limSolve::Solve(as.matrix(score_deriv), -score)
+      } else {
+        tmp <- limSolve::Solve(score_deriv, -score)
+      }
+      
+      theta_new <- tmp + theta_old
+    } else {
+      stop("Your option is not a valid solving option.")
+    }
+    B_new <- theta_new[upd_ind %in% B_upd_ind]
+    z_new <- theta_new[upd_ind %in% z_ind]
+    
+    # put B back into matrix
+    B_full[B_upd_ind] <- B_new
+    B_mat <- matrix(B_full, nrow = p, ncol = J)
+    # fill in B values that are predetermined by constraint
+    if (constraint == "scc") {
+      B_mat[, constraint_cat] <- 0
+    } else if (constraint == "mc") {
+      B_mat[, constraint_cat] <- -rowSums(B_mat[, -constraint_cat])
+    } else {
+      B_mat[, constraint_cat] <- -rowSums(B_mat[, subset_j_no_c]) 
+    }
+    #z_new <- update_z(Y, X, B_mat)
+    # set null B to 0 (Sarah check - this should never change from 0)
+    #B_mat[null_k, null_j] <- 0 
+    
+    B_prime <- as.vector(B_mat)
+    theta <- generate_theta(B_prime, z_new)
+    W <- generate_W(A_prime, theta)
+    W_cstr <- generate_W_cstr(W = W, X = X, B = B_mat, z = z_new, constraint = constraint,
+                              constraint_cat = constraint_cat, subset_j = subset_j)$W_BB
+    info <- Matrix::crossprod(X_prime[obs_cstr_ind, param_cstr_ind], W_cstr) %*%
+      X_prime[obs_cstr_ind, param_cstr_ind]
     
     # update t and likelihood value
-    lik_vec[t] <- compute_loglik(Y, X, B, z)
-    scores <- compute_scores_cstr(X = X, Y = Y, B = B, z = z, 
+    lik_vec[t] <- compute_loglik(Y, X, B_mat, z_new) + 
+      0.5*Matrix::determinant(info)$modulus
+    scores <- compute_scores_cstr(X = X, Y = Y, B = B_mat, z = z_new, 
                                   constraint = constraint, 
                                   constraint_cat = constraint_cat,
                                   subset_j = subset_j)
-    score_mat[, t] <- scores[c(upd_ind, (p*J + 1):(p*J + n))]
-    B_array[, , t] <- B
-    z_array[, t] <- z
+    score_mat[, t] <- scores[upd_ind]
+    B_array[, , t] <- B_mat
+    z_array[, t] <- z_new
     f_old <- f_new
     f_new <- lik_vec[t]
     t <- t + 1

@@ -15,8 +15,8 @@
 #' @return A list including values of the log likelihood, the B matrix, and the z vector at each iteration.
 #'
 #' @examples
-#' n <- 72
-#' J <- 100
+#' n <- 50
+#' J <- 10
 #' X <- cbind(1, rep(c(0, 1), each = n/2))
 #' z <- rnorm(n) + 5
 #' b0 <- rnorm(J)
