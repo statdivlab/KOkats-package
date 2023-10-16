@@ -82,8 +82,8 @@ run_score_test <- function(formula_rhs = NULL,
   n <- nrow(X)
   p <- ncol(X)
   J <- ncol(Y)
-  upd_ind <- (1:(p*J + n))[-c(get_theta_ind(j = constraint_cat, k = 1:p, p = p),
-                              get_theta_ind(j = null_j, k = null_k, p = p))]
+  cc_ind <- get_theta_ind(j = constraint_cat, k = 1:p, p = p)
+  upd_ind <- (1:(p*J + n))[-c(cc_ind, get_theta_ind(j = null_j, k = null_k, p = p))]
   
   # get optimal values under null hypothesis 
   if (opt_option == "bcd") {
@@ -121,9 +121,20 @@ run_score_test <- function(formula_rhs = NULL,
   if (robust) {
     D <- compute_score_var_cstr(Y = Y, X = X, B = B_mle, z = z_mle, constraint = constraint,
                                 constraint_cat = constraint_cat, subset_j = subset_j)
+    eigs <- eigen(D[-cc_ind, -cc_ind])$values
+    min_eig <- min(eigs)
+    if (min_eig > 0) {
+      message(paste0("The minimum eigenvalue of D is ", min_eig, " and the matrix is PD."))
+    } else if (min_eig == 0) {
+      message(paste0("The minimum eigenvalue of D is 0 and the matrix is PSD."))
+    } else {
+      message(paste0("The minimum eigenvalue of D is ", min_eig, " and the matrix is not PD or PSD."))
+    }
     score_var <- compute_var_single_score(null_ind = null_ind, upd_ind = upd_ind, 
                                           p = p, D = D, info = info, robust = TRUE)
   } else {
+    D <- NULL 
+    min_eig <- NULL
     score_var <- compute_var_single_score(null_ind = null_ind, upd_ind = upd_ind,
                                           p = p, D = NULL, info = info, robust = FALSE)
   }
@@ -133,5 +144,5 @@ run_score_test <- function(formula_rhs = NULL,
   p_val <- 1 - stats::pchisq(test_stat, 1)
   
   return(list(null_estimates = null_res, test_stat = test_stat, p_val = p_val,
-              scores = scores, info = info, D = D))
+              scores = scores, info = info, D = D, D_eigs = eigs))
 }
