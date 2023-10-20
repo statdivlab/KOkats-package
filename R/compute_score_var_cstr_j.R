@@ -13,7 +13,7 @@
 #' @return A matrix giving the empirical variance of the score vector.
 #' 
 #' @export
-compute_score_var_cstr <- function(Y, X, B, z, constraint, constraint_cat, subset_j) {
+compute_score_var_cstr_j <- function(Y, X, B, z, constraint, constraint_cat, subset_j) {
   
   # get hyperparameters 
   n <- nrow(X)
@@ -26,31 +26,43 @@ compute_score_var_cstr <- function(Y, X, B, z, constraint, constraint_cat, subse
   z_mat <- matrix(z, ncol = 1) %*% matrix(1, ncol = J, nrow = 1)
   log_means <- X %*% B + z_mat
   D <- matrix(0, nrow = p*(J - 1) + n, ncol = p*(J - 1) + n)
+  scores <- rep(0, p*(J - 1) + n)
   for (i in 1:n) {
-    score <- rep(0, p*(J - 1) + n)
-    for (ind in 1:(p*(J - 1))) {
-      j <- j_vec[ind]
-      if (constraint == "scc") {
-        score[ind] <- X[i, k_vec[ind]] * (Y[i, j] - exp(log_means[i, j]))
-      } else if (constraint == "mc") {
-        score[ind] <- X[i, k_vec[ind]] * (-Y[i, constraint_cat] + Y[i, j] +
-                                            exp(log_means[i, constraint_cat]) - 
-                                            exp(log_means[i, j]))
-      } else {
-        val <- X[i, k_vec[ind]] * (Y[i, j] - exp(log_means[i, j]))
-        if (j %in% subset_j) {
-          val <- val + X[i, k_vec[ind]] * (-Y[i, constraint_cat] + 
-                                             exp(log_means[i, constraint_cat]))
+    for (j in js) {
+      score <- rep(0, p*(J - 1) + n)
+      for (ind in 1:(p*(J - 1))) {
+        j_ind <- j_vec[ind]
+        if (constraint == "scc") {
+          if (j == j_ind) {
+            score[ind] <- X[i, k_vec[ind]] * (Y[i, j] - exp(log_means[i, j]))
+          }
+        } else if (constraint == "mc") {
+          val <- X[i, k_vec[ind]] / (J - 1) * (-Y[i, constraint_cat] + 
+                                                 exp(log_means[i, constraint_cat]))
+          if (j_ind == j) {
+            val <- val + X[i, k_vec[ind]] * (Y[i, j] - exp(log_means[i, j]))
+          }
+          score[ind] <- val
+          # } else {
+          #   val <- X[i, k_vec[ind]] * (Y[i, j] - exp(log_means[i, j]))
+          #   if (j %in% subset_j) {
+          #     val <- val + X[i, k_vec[ind]] * (-Y[i, constraint_cat] + 
+          #                                        exp(log_means[i, constraint_cat]))
+          #   }
+          #   score[ind] <- val
         }
-        score[ind] <- val
       }
-    }
-    for (ind in 1:n) {
-      if (ind == i) {
-        score[ind + p*(J - 1)] <- sum(Y[i, ] - exp(X[i, ] %*% B + z[i]))
+      for (ind in 1:n) {
+        if (ind == i) {
+          score[ind + p*(J - 1)] <- 
+            (Y[i, constraint_cat] - exp(log_means[i, constraint_cat])) / (J - 1) + 
+            Y[i, j] - exp(log_means[i, j])
+          #score[ind + p*(J - 1)] <- sum(Y[i, ] - exp(X[i, ] %*% B + z[i]))
+        }
       }
+      D <- D + score %*% t(score)
+      scores <- scores + score 
     }
-    D <- D + score %*% t(score)
   }
   
   full_D <- matrix(NA, nrow = p*J + n, ncol = p*J + n)
@@ -58,6 +70,5 @@ compute_score_var_cstr <- function(Y, X, B, z, constraint, constraint_cat, subse
   full_D[-constraint_ind, -constraint_ind] <- D
   
   # return empirical score variance
-  return(full_D)
+  return(list(full_D = full_D, scores = scores))
 }
-

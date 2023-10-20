@@ -119,7 +119,7 @@ run_score_test <- function(formula_rhs = NULL,
   # get covariance of score using mles under null
   null_ind <- get_theta_ind(null_j, null_k, p)
   if (robust) {
-    D <- compute_score_var_cstr(Y = Y, X = X, B = B_mle, z = z_mle, constraint = constraint,
+    D <- compute_score_var_cstr_j(Y = Y, X = X, B = B_mle, z = z_mle, constraint = constraint,
                                 constraint_cat = constraint_cat, subset_j = subset_j)
     eigs <- eigen(D[-cc_ind, -cc_ind])$values
     min_eig <- min(eigs)
