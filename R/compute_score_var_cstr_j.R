@@ -70,5 +70,5 @@ compute_score_var_cstr_j <- function(Y, X, B, z, constraint, constraint_cat, sub
   full_D[-constraint_ind, -constraint_ind] <- D
   
   # return empirical score variance
-  return(list(full_D = full_D, scores = scores))
+  return(full_D)
 }
