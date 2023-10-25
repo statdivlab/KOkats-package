@@ -135,6 +135,7 @@ run_score_test <- function(formula_rhs = NULL,
   } else {
     D <- NULL 
     min_eig <- NULL
+    eigs <- NULL
     score_var <- compute_var_single_score(null_ind = null_ind, upd_ind = upd_ind,
                                           p = p, D = NULL, info = info, robust = FALSE)
   }
