@@ -183,5 +183,5 @@ fit_penalized_bcd_unconstrained_fast <- function(formula_rhs = NULL,
   }
   return(list(likelihood = lik_vec, score = score_vec, 
               B = B_array, z = z_array,
-              final_B = final_B, final_z = final_z))
+              final_B = final_B, final_z = final_z, augs = aug_vec/2))
 }
