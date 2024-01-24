@@ -62,10 +62,10 @@ fit_bcd_unconstrained <- function(formula_rhs = NULL,
   
   # set up initial hyperparameters and parameters 
   p <- ncol(X)
-  if (p < 2) {
-    stop("X must contain an intercept column and at least one other (linearly
-          independent) column")
-  }
+  #if (p < 2) {
+  #  stop("X must contain an intercept column and at least one other (linearly
+  #        independent) column")
+  #}
   J <- ncol(Y)
   n <- nrow(X)
   
@@ -134,7 +134,11 @@ fit_bcd_unconstrained <- function(formula_rhs = NULL,
     }
   }
   
-  final_B <- B_array[, , (t-1)]
+  if (p == 1) {
+    final_B <- matrix(B_array[, , (t-1)], nrow = 1, ncol = J)
+  } else {
+    final_B <- B_array[, , (t-1)]
+  }
   # enforce identifiability constraint 
   for (k in 1:p) {
     final_B[k, ] <- final_B[k, ] - constraint_fn(final_B[k, ])
