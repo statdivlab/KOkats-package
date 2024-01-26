@@ -57,42 +57,46 @@ get_hat <- function(X, B, z, cc = NULL) {
   full_info <- Matrix::crossprod(A_prime, W) %*% A_prime 
   info <- full_info[param_cstr_ind, param_cstr_ind]
   
-  # # get useful quantities
-  # ident <- diag(J - 1)
-  # one_vec <- rep(1, J - 1)
-  # 
-  # # loop over samples 
-  # for (i in 1:n) {
-  #   # construct G_i matrix 
-  #   G_i <- kronecker(ident, t(X[i, ]))
-  #   
-  #   # construct Z_i matrix 
-  #   e_i <- rep(0, n)
-  #   e_i[i] <- 1 
-  #   partA <- cbind(G_i, one_vec %x% t(e_i))
-  #   partB <- c(rep(0, p*(J - 1)), t(e_i))
-  #   if (cc == 1) {
-  #     Z_i <- rbind(partB, partA)
-  #   } else if (cc == J) {
-  #     Z_i <- rbind(partA, partB)
-  #   } else {
-  #     Z_i <- rbind(partA[1:(cc - 1),], partB, partA[cc:(J - 1), ])
-  #   }
-  #   
-  #   # construct H_i matrix 
-  #   i_ind <- (1 + (i - 1)*J):(J + (i - 1)*J)
-  #   H_i <- Z_i %*% solve(info) %*% t(Z_i) %*% W[i_ind, i_ind]
-  #   
-  #   # save H_i diagonals 
-  #   hat_diags[i, ] <- diag(as.matrix(H_i))
-  # }
+  # get useful quantities
+  ident <- diag(J - 1)
+  one_vec <- rep(1, J - 1)
+  A_prime_less <- A_prime[, param_cstr_ind]
+  info_inv <- chol2inv(chol(info))
+
+  # loop over samples
+  for (i in 1:n) {
+    # # construct G_i matrix
+    # G_i <- kronecker(ident, t(X[i, ]))
+    # 
+    # # construct Z_i matrix
+    # e_i <- rep(0, n)
+    # e_i[i] <- 1
+    # partA <- cbind(G_i, one_vec %x% t(e_i))
+    # partB <- c(rep(0, p*(J - 1)), t(e_i))
+    # if (cc == 1) {
+    #   Z_i <- rbind(partB, partA)
+    # } else if (cc == J) {
+    #   Z_i <- rbind(partA, partB)
+    # } else {
+    #   Z_i <- rbind(partA[1:(cc - 1),], partB, partA[cc:(J - 1), ])
+    # }
+
+    # construct H_i matrix
+    i_ind <- (1 + (i - 1)*J):(i*J)
+    #H_i <- Z_i %*% solve(info) %*% t(Z_i) %*% W[i_ind, i_ind]
+
+    # save H_i diagonals
+    #hat_diags[i, ] <- diag(as.matrix(H_i))
+    hat_diags[i, ] <- diag(as.matrix(Matrix::tcrossprod(A_prime_less[i_ind, ] %*% info_inv, 
+                                         A_prime_less[i_ind, ]) %*% W[i_ind, i_ind]))
+  }
   
-  hat_mat <- Matrix::tcrossprod(A_prime[, param_cstr_ind] %*% 
-                                  chol2inv(chol(info)), 
-                                A_prime[, param_cstr_ind]) %*% W
-  hat_diag <- matrix(diag(as.matrix(hat_mat)), nrow = n, ncol = J, byrow = TRUE)
+  # hat_mat <- Matrix::tcrossprod(A_prime[, param_cstr_ind] %*% 
+  #                                 chol2inv(chol(info)), 
+  #                               A_prime[, param_cstr_ind]) %*% W
+  # hat_diag <- matrix(diag(as.matrix(hat_mat)), nrow = n, ncol = J, byrow = TRUE)
   
   # return values 
-  return(hat_diag)
+  return(hat_diags)
   
 }
